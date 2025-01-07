@@ -74,107 +74,58 @@ class ContentAnalyzer:
         if not self.load_model():
             return {"error": "Model loading failed"}
 
-        # Original trigger categories
+        chunk_size = 256  # Set the chunk size for text processing
+        overlap = 15  # Overlap between chunks for context preservation
+        script_chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size - overlap)]
+
         trigger_categories = {
-            "Violence": {
-                "mapped_name": "Violence",
-                "description": "Any act involving physical force or aggression intended to cause harm, injury, or death."
-            },
-            "Death": {
-                "mapped_name": "Death References",
-                "description": "Any mention, implication, or depiction of the loss of life, including direct deaths or abstract references to mortality."
-            },
-            "Substance_Use": {
-                "mapped_name": "Substance Use",
-                "description": "References to consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances."
-            },
-            "Gore": {
-                "mapped_name": "Gore",
-                "description": "Graphic depictions of severe physical injuries, mutilation, or extreme bodily harm."
-            },
-            "Sexual_Content": {
-                "mapped_name": "Sexual Content",
-                "description": "Depictions or mentions of sexual activity, intimacy, or sexual behavior."
-            },
-            "Self_Harm": {
-                "mapped_name": "Self-Harm",
-                "description": "Behaviors where an individual intentionally causes harm to themselves."
-            },
-            "Mental_Health": {
-                "mapped_name": "Mental Health Issues",
-                "description": "References to mental health struggles, disorders, or psychological distress."
-            }
+            "Violence": {"mapped_name": "Violence", "description": "Any act involving physical force or aggression intended to cause harm, injury, or death."},
+            "Death": {"mapped_name": "Death References", "description": "Any mention, implication, or depiction of the loss of life, including direct deaths or abstract references to mortality."},
+            "Substance_Use": {"mapped_name": "Substance Use", "description": "References to consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances."},
+            "Gore": {"mapped_name": "Gore", "description": "Graphic depictions of severe physical injuries, mutilation, or extreme bodily harm."},
+            "Sexual_Content": {"mapped_name": "Sexual Content", "description": "Depictions or mentions of sexual activity, intimacy, or sexual behavior."},
+            "Self_Harm": {"mapped_name": "Self-Harm", "description": "Behaviors where an individual intentionally causes harm to themselves."},
+            "Mental_Health": {"mapped_name": "Mental Health Issues", "description": "References to mental health struggles, disorders, or psychological distress."}
         }
 
-        try:
-            # Optimize chunk processing
-            chunk_size = 200  # Reduced chunk size for better memory management
-            overlap = 10
-            chunks = []
-            
-            # Create chunks with overlap
-            for i in range(0, len(text), chunk_size - overlap):
-                chunk = text[i:i + chunk_size]
-                chunks.append(chunk)
-            
-            trigger_scores = {}
-            trigger_occurrences = {}
-            
-            # Initialize tracking dictionaries
+        identified_triggers = {}
+
+        for chunk_idx, chunk in enumerate(script_chunks, 1):
+            print(f"\n--- Processing Chunk {chunk_idx}/{len(script_chunks)} ---")
             for category, info in trigger_categories.items():
-                trigger_scores[info["mapped_name"]] = 0
-                trigger_occurrences[info["mapped_name"]] = []
-            
-            # Process all chunks for all categories
-            for chunk_idx, chunk in enumerate(chunks):
-                print(f"\nProcessing chunk {chunk_idx + 1}/{len(chunks)}")
-                chunk_triggers = {}
-                
-                for category, info in trigger_categories.items():
-                    score, response = self.analyze_chunk(chunk, info)
-                    
-                    if score > 0:
-                        mapped_name = info["mapped_name"]
-                        trigger_scores[mapped_name] += score
-                        trigger_occurrences[mapped_name].append({
-                            'chunk_idx': chunk_idx,
-                            'response': response,
-                            'score': score
-                        })
-                        print(f"Found {mapped_name} in chunk {chunk_idx + 1} (Response: {response})")
-                
-                # Cleanup after processing each chunk
-                if self.device == "cuda":
-                    self.cleanup()
+                score, response = self.analyze_chunk(chunk, info)
+                if response == "YES":
+                    identified_triggers[category] = identified_triggers.get(category, 0) + 1
+                elif response == "MAYBE":
+                    identified_triggers[category] = identified_triggers.get(category, 0) + 0.5
 
-            # Collect all triggers that meet the threshold
-            detected_triggers = []
-            for name, score in trigger_scores.items():
-                if score >= 0.5:  # Threshold for considering a trigger as detected
-                    occurrences = len(trigger_occurrences[name])
-                    detected_triggers.append(name)
-                    print(f"\nTrigger '{name}' detected in {occurrences} chunks with total score {score}")
-            
-            result = {
-                "detected_triggers": detected_triggers if detected_triggers else ["None"],
-                "confidence": "High - Content detected" if detected_triggers else "High - No concerning content detected",
-                "model": self.model_name,
-                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "trigger_details": {
-                    name: {
-                        "total_score": trigger_scores[name],
-                        "occurrences": trigger_occurrences[name]
-                    } for name in detected_triggers if name != "None"
-                }
-            }
+        final_triggers = [category for category, count in identified_triggers.items() if count > 0.5]
+        self.cleanup()
 
-            return result
+        if not final_triggers:
+            final_triggers = ["None"]
 
-        except Exception as e:
-            return {"error": str(e)}
-        finally:
-            self.cleanup()
+        return final_triggers
 
 def get_detailed_analysis(script):
     analyzer = ContentAnalyzer()
-    return analyzer.analyze_text(script)
+    print("\n=== Starting Detailed Analysis ===")
+    triggers = analyzer.analyze_text(script)
+    
+    if isinstance(triggers, list) and triggers != ["None"]:
+        result = {
+            "detected_triggers": triggers,
+            "confidence": "High - Content detected",
+            "model": "Llama-3.2-1B",
+            "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+    else:
+        result = {
+            "detected_triggers": ["None"],
+            "confidence": "High - No concerning content detected",
+            "model": "Llama-3.2-1B",
+            "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+    print("\nFinal Result Dictionary:", result)
+    return result
