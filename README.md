@@ -1,4 +1,4 @@
-![Treat_Banner](static/images/readme-images/New_Treat_Banner.png)
+![Treat_Banner](static/images/readme-images/New_Treat_Banner.jpg)
 
 <h1 align="center">
   Trigger Recognition for Enjoyable and Appropriate Television
@@ -28,7 +28,7 @@ TREAT is a web application that uses natural language processing to analyze movi
 ### Hugging Face Login Instructions for Llama-3.2-1B Model
 To use the [Llama-3.2-1B model](https://huggingface.co/meta-llama/Llama-3.2-1B), which provides a 35% increase in accuracy and efficiency over the [previous model](https://github.com/Kuberwastaken/TREAT-CS50), you must request access for it, as it is a gated model.
 
-   ![Request_Accesss_Page](static/images/readme-images/Request-Access-Page.png)
+   ![Request_Accesss_Page](static/images/readme-images/Request-Access-Page.jpg)
 
 1. **Login to Hugging Face in Your Environment:**
 
