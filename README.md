@@ -1,6 +1,6 @@
 ---
 title: TREAT
-emoji: 🍪
+emoji: 🍫
 colorFrom: pink
 colorTo: blue
 sdk: gradio
