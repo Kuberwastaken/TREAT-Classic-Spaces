@@ -3,7 +3,7 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 
-# Custom CSS for dark theme, animations, and new accent color
+# Custom CSS for dark theme, animations, and purple accent color
 custom_css = """
 .gradio-container {
     background: #121212 !important;
@@ -30,22 +30,10 @@ custom_css = """
     animation: fadeInText 1.5s ease-out;
 }
 
-.treat-title span {
-    color: #fff;
-}
-
-.treat-title .web {
-    font-size: 0.4em;
-    color: #4f46e5;
-    margin-top: -15px;
-    display: block;
-    animation: fadeInText 1.5s ease-out 0.5s;
-}
-
 .treat-title p {
     font-size: 1.3em;
-    color: #fff;
-    animation: fadeInText 1.5s ease-out 1s;
+    color: #4f46e5;
+    animation: fadeInText 1.5s ease-out 0.5s;
 }
 
 .highlight {
@@ -90,12 +78,12 @@ custom_css = """
 
 .gradio-button:hover {
     transform: scale(1.1) !important;
-    background-color: #3e38c2 !important;
+    background-color: #5749d3 !important;
 }
 
 .gradio-button:active {
     transform: scale(0.98) !important;
-    background-color: #3530a8 !important;
+    background-color: #4b40bb !important;
 }
 
 label {
@@ -178,8 +166,11 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     gr.HTML("""
         <div class="treat-title">
             <h1>TREAT</h1>
-            <span>Trigger Recognition for Enjoyable and Appropriate Television</span>
-            <div class="web">WEB</div>
+            <p><span class="highlight">T</span>rigger 
+               <span class="highlight">R</span>ecognition for 
+               <span class="highlight">E</span>njoyable and 
+               <span class="highlight">A</span>ppropriate 
+               <span class="highlight">T</span>elevision</p>
         </div>
     """)
     
