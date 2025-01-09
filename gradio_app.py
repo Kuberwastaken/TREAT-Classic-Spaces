@@ -6,7 +6,7 @@ import time
 # Custom CSS for styling
 custom_css = """
 .gradio-container {
-    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%) !important;
+background: linear-gradient(135deg, #d81b60 0%, #1a237e 100%) !important;
 }
 
 .treat-title {
@@ -20,7 +20,7 @@ custom_css = """
 
 .treat-title h1 {
     font-size: 3em;
-    color: #d81b60;
+    color: #6366f1;
     margin-bottom: 10px;
     font-weight: bold;
 }
@@ -31,7 +31,7 @@ custom_css = """
 }
 
 .highlight {
-    color: #d81b60;
+    color: #6366f1;
     font-weight: bold;
 }
 
@@ -53,7 +53,7 @@ custom_css = """
 }
 
 .gradio-button {
-    background-color: #d81b60 !important;
+    background-color: #6366f1 !important;
     color: white !important;
     border: none !important;
     border-radius: 25px !important;
