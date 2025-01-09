@@ -1,8 +1,14 @@
 import gradio as gr
-from model.model import get_detailed_analysis
+from model.analyzer import analyze_content
 
-def analyze_script(script):
-    return get_detailed_analysis(script)
+# Create and launch the Gradio interface
+iface = gr.Interface(
+    fn=analyze_content,
+    inputs=gr.Textbox(lines=8, label="Input Text"),
+    outputs=gr.JSON(),
+    title="Content Analysis",
+    description="Analyze text content for sensitive topics"
+)
 
-iface = gr.Interface(fn=analyze_script, inputs="text", outputs="json")
-iface.launch()
+if __name__ == "__main__":
+    iface.launch()
