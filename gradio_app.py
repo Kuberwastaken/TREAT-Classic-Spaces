@@ -3,7 +3,7 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 
-# Custom CSS for dark theme and modern animations
+# Custom CSS for dark theme, animations, and purple accent color
 custom_css = """
 .gradio-container {
     background: #121212 !important;
@@ -14,7 +14,7 @@ custom_css = """
 
 .treat-title {
     text-align: center;
-    padding: 30px;
+    padding: 40px;
     margin-bottom: 30px;
     background: rgba(18, 18, 18, 0.85);
     border-radius: 15px;
@@ -23,8 +23,8 @@ custom_css = """
 }
 
 .treat-title h1 {
-    font-size: 3.5em;
-    color: #ffa726;
+    font-size: 5em;
+    color: #6366f1;
     margin-bottom: 10px;
     font-weight: bold;
     animation: fadeInText 1.5s ease-out;
@@ -32,12 +32,12 @@ custom_css = """
 
 .treat-title p {
     font-size: 1.3em;
-    color: #ff7043;
+    color: #6366f1;
     animation: fadeInText 1.5s ease-out 0.5s;
 }
 
 .highlight {
-    color: #ffa726;
+    color: #6366f1;
     font-weight: bold;
 }
 
@@ -62,11 +62,11 @@ custom_css = """
 }
 
 .gradio-textbox textarea:focus {
-    border-color: #ffa726 !important;
+    border-color: #6366f1 !important;
 }
 
 .gradio-button {
-    background-color: #ff7043 !important;
+    background-color: #6366f1 !important;
     color: white !important;
     border: none !important;
     border-radius: 25px !important;
@@ -78,12 +78,12 @@ custom_css = """
 
 .gradio-button:hover {
     transform: scale(1.1) !important;
-    background-color: #ffa726 !important;
+    background-color: #5749d3 !important;
 }
 
 .gradio-button:active {
     transform: scale(0.98) !important;
-    background-color: #fb8c00 !important;
+    background-color: #4b40bb !important;
 }
 
 label {
@@ -108,7 +108,7 @@ label {
 }
 
 .footer p {
-    color: #ffa726;
+    color: #6366f1;
 }
 
 @keyframes slideInFromTop {
@@ -125,7 +125,6 @@ label {
     0% { opacity: 0; transform: translateY(30px); }
     100% { opacity: 1; transform: translateY(0); }
 }
-
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
