@@ -172,10 +172,10 @@ class ContentAnalyzer:
                 with torch.no_grad():
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=3,
+                        max_new_tokens=15,
                         do_sample=True,
-                        temperature=0.5,
-                        top_p=0.9,
+                        temperature=0.3,
+                        top_p=0.85,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
@@ -185,7 +185,7 @@ class ContentAnalyzer:
                 if first_word == "YES":
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 1
                 elif first_word == "MAYBE":
-                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.5
+                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.2
 
                 if progress:
                     current_progress += progress_step
