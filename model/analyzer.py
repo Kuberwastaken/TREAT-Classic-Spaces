@@ -123,7 +123,7 @@ class ContentAnalyzer:
             logger.error(f"Error loading model: {str(e)}")
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 10) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 15) -> List[str]:
         """Split text into overlapping chunks for processing."""
         return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size - overlap)]
 
@@ -156,10 +156,10 @@ class ContentAnalyzer:
                 with torch.no_grad():
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=10,
+                        max_new_tokens=3,
                         do_sample=True,
-                        temperature=0.5,
-                        top_p=0.9,
+                        temperature=0.7,
+                        top_p=0.8,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
