@@ -1,3 +1,6 @@
+# analyzer.py
+# model > analyzer.py
+
 import os
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
