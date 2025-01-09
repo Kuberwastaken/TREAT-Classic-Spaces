@@ -8,14 +8,12 @@ custom_css = """
 * {
     font-family: 'Roboto', sans-serif;
 }
-
 .gradio-container {
     background: #121212 !important;
     color: #fff !important;
     overflow: hidden;
     transition: background 0.5s ease;
 }
-
 .treat-title {
     text-align: center;
     padding: 40px;
@@ -25,7 +23,6 @@ custom_css = """
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     animation: slideInFromTop 1s ease-out;
 }
-
 .treat-title h1 {
     font-size: 5em;
     color: #4f46e5;
@@ -33,18 +30,15 @@ custom_css = """
     font-weight: bold;
     animation: fadeInText 1.5s ease-out;
 }
-
 .treat-title p {
     font-size: 1.3em;
     color: #4f46e5;
     animation: fadeInText 1.5s ease-out 0.5s;
 }
-
 .highlight {
     color: #4f46e5;
     font-weight: bold;
 }
-
 .content-area, .results-area {
     background: rgba(33, 33, 33, 0.9) !important;
     border-radius: 15px !important;
@@ -54,7 +48,6 @@ custom_css = """
     opacity: 0;
     animation: fadeInUp 1s forwards;
 }
-
 .gradio-textbox textarea {
     background-color: #333 !important;
     color: #fff !important;
@@ -64,11 +57,9 @@ custom_css = """
     font-size: 1.1em !important;
     transition: border-color 0.3s ease;
 }
-
 .gradio-textbox textarea:focus {
     border-color: #4f46e5 !important;
 }
-
 .gradio-button {
     background-color: #4f46e5 !important;
     color: white !important;
@@ -79,29 +70,24 @@ custom_css = """
     transition: transform 0.3s ease, background-color 0.3s ease;
     margin: 20px 0 !important;
 }
-
 .gradio-button:hover {
     transform: scale(1.1) !important;
     background-color: #5749d3 !important;
 }
-
 .gradio-button:active {
     transform: scale(0.98) !important;
     background-color: #4b40bb !important;
 }
-
 label {
     color: #ccc !important;
     font-weight: 500 !important;
     margin-bottom: 10px !important;
 }
-
 .center-row {
     display: flex;
     justify-content: center;
     align-items: center;
 }
-
 .footer {
     text-align: center;
     margin-top: 40px;
@@ -110,45 +96,55 @@ label {
     opacity: 0;
     animation: fadeInUp 1s forwards 1.5s;
 }
-
 .footer p {
     color: #4f46e5;
 }
-
 @keyframes slideInFromTop {
     0% { transform: translateY(-50px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes fadeInText {
     0% { opacity: 0; }
     100% { opacity: 1; }
 }
-
 @keyframes fadeInUp {
     0% { opacity: 0; transform: translateY(30px); }
     100% { opacity: 1; transform: translateY(0); }
 }
 """
 
-async def analyze_with_loading(text, progress=gr.Progress()):
+def analyze_with_loading(text, progress=gr.Progress()):
     """
-    Asynchronous wrapper for analyze_content that properly tracks progress
+    Synchronous wrapper for the async analyze_content function
     """
+    # Initialize progress
+    progress(0, desc="Starting analysis...")
+    
+    # Initial setup phase
+    for i in range(30):
+        time.sleep(0.02)  # Reduced sleep time
+        progress((i + 1) / 100)
+    
+    # Perform analysis
+    progress(0.3, desc="Processing text...")
     try:
-        # Call analyze_content directly with the progress object
-        result = await analyze_content(text, progress)
-        
-        # Format the results
-        triggers = result["detected_triggers"]
-        if triggers == ["None"]:
-            return "✓ No concerns detected in the content."
-        else:
-            trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
-            return f"⚠ Triggers Detected:\n{trigger_list}"
-            
+        # Use asyncio.run to handle the async function call
+        result = asyncio.run(analyze_content(text))
     except Exception as e:
         return f"Error during analysis: {str(e)}"
+    
+    # Final processing
+    for i in range(70, 100):
+        time.sleep(0.02)  # Reduced sleep time
+        progress((i + 1) / 100)
+    
+    # Format the results
+    triggers = result["detected_triggers"]
+    if triggers == ["None"]:
+        return "✓ No triggers detected in the content."
+    else:
+        trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
+        return f"⚠ Triggers Detected:\n{trigger_list}"
 
 # Create the Gradio interface
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
@@ -206,6 +202,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     """)
 
 if __name__ == "__main__":
+    # Launch without the 'ssr' argument
     iface.launch(
         share=False,
         debug=True,

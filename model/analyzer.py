@@ -122,7 +122,7 @@ class ContentAnalyzer:
             )
 
             if progress:
-                progress(0.15, "Loading model...")
+                progress(0.3, "Loading model...")
             
             self.model = AutoModelForCausalLM.from_pretrained(
                 "meta-llama/Llama-3.2-1B",
@@ -132,7 +132,7 @@ class ContentAnalyzer:
             )
 
             if progress:
-                progress(0.2, "Model loaded successfully")
+                progress(0.5, "Model loaded successfully")
             
             logger.info(f"Model loaded successfully on {self.device}")
         except Exception as e:
@@ -147,6 +147,7 @@ class ContentAnalyzer:
         
         while start < text_len:
             end = min(start + chunk_size, text_len)
+            # Find the last period or newline in the chunk to avoid cutting sentences
             if end < text_len:
                 last_period = max(
                     text.rfind('. ', start, end),
@@ -164,6 +165,7 @@ class ContentAnalyzer:
         """Process model response and return a confidence score."""
         response = response_text.strip().upper()
         
+        # Check for explicit YES/NO/MAYBE
         if "YES" in response:
             evidence_words = ["CLEAR", "DEFINITELY", "EXPLICIT", "STRONG"]
             return 1.0 if any(word in response for word in evidence_words) else 0.8
@@ -172,6 +174,7 @@ class ContentAnalyzer:
         elif "NO" in response:
             return 0.0
         
+        # Fallback analysis for unclear responses
         positive_indicators = ["PRESENT", "FOUND", "CONTAINS", "SHOWS", "INDICATES"]
         negative_indicators = ["ABSENT", "NONE", "NOTHING", "LACKS"]
         
@@ -191,7 +194,6 @@ class ContentAnalyzer:
     ) -> Dict[str, float]:
         """Analyze a single chunk of text for triggers."""
         chunk_triggers = {}
-        progress_increment = progress_step / len(self.trigger_categories)
         
         for category, info in self.trigger_categories.items():
             mapped_name = info["mapped_name"]
@@ -236,8 +238,8 @@ class ContentAnalyzer:
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + confidence
 
                 if progress:
-                    current_progress += progress_increment
-                    progress(min(current_progress, 0.9), f"Analyzing for {mapped_name}...")
+                    current_progress += progress_step
+                    progress(min(current_progress, 0.9), f"Analyzing {mapped_name}...")
 
             except Exception as e:
                 logger.error(f"Error analyzing chunk for {mapped_name}: {str(e)}")
@@ -251,40 +253,28 @@ class ContentAnalyzer:
 
         chunks = self._chunk_text(script)
         trigger_scores = {}
-        
-        # Calculate progress allocation
-        analysis_progress = 0.7  # 70% of progress for analysis
-        progress_per_chunk = analysis_progress / len(chunks)
-        current_progress = 0.2  # Starting after model loading
-        
-        if progress:
-            progress(current_progress, "Beginning content analysis...")
+        progress_step = 0.4 / (len(chunks) * len(self.trigger_categories))
+        current_progress = 0.5
 
-        for i, chunk in enumerate(chunks):
+        for chunk in chunks:
             chunk_triggers = await self.analyze_chunk(
                 chunk,
                 progress,
                 current_progress,
-                progress_per_chunk
+                progress_step
             )
             
             for trigger, score in chunk_triggers.items():
                 trigger_scores[trigger] = trigger_scores.get(trigger, 0) + score
-            
-            current_progress += progress_per_chunk
-            if progress:
-                chunk_number = i + 1
-                progress(min(0.9, current_progress), 
-                        f"Processing chunk {chunk_number}/{len(chunks)}...")
 
         if progress:
-            progress(0.95, "Finalizing analysis...")
+            progress(0.95, "Finalizing results...")
 
         # Normalize scores by number of chunks and apply threshold
         chunk_count = len(chunks)
         final_triggers = [
             trigger for trigger, score in trigger_scores.items()
-            if score / chunk_count > 0.3
+            if score / chunk_count > 0.3  # Adjusted threshold for better balance
         ]
 
         return final_triggers if final_triggers else ["None"]
@@ -297,9 +287,6 @@ async def analyze_content(
     analyzer = ContentAnalyzer()
     
     try:
-        if progress:
-            progress(0.0, "Initializing analyzer...")
-        
         triggers = await analyzer.analyze_script(script, progress)
         
         if progress:
