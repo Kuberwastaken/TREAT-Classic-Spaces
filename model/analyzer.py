@@ -174,8 +174,8 @@ class ContentAnalyzer:
                         **inputs,
                         max_new_tokens=10,
                         do_sample=True,
-                        temperature=0.3,
-                        top_p=0.6,
+                        temperature=0.7,
+                        top_p=0.8,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
