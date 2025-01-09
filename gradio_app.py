@@ -82,16 +82,6 @@ label {
     align-items: center;
 }
 
-.footer {
-    text-align: center;
-    position: absolute;
-    bottom: 10px;
-    width: 100%;
-    font-size: 1.2em;
-    color: #6366f1;
-}
-
-
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
