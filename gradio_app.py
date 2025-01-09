@@ -171,5 +171,4 @@ if __name__ == "__main__":
         share=False,
         debug=True,
         show_error=True,
-        ssr=False  # Disable SSR to prevent potential issues
     )
