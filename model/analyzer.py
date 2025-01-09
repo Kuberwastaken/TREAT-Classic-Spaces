@@ -188,12 +188,11 @@ def analyze_script(script):
 
     return final_triggers
 
-# Define the Gradio interface
 def analyze_content(script):
-    # Perform the analysis on the input script using the analyze_script function
+    # Simulate trigger analysis (you can replace this with your actual logic)
     triggers = analyze_script(script)
-
-    # Define the result based on the triggers found
+    
+    # Define the result based on triggers found
     if isinstance(triggers, list) and triggers != ["None"]:
         result = {
             "detected_triggers": triggers,
@@ -208,7 +207,7 @@ def analyze_content(script):
             "model": "Llama-3.2-1B",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-
+    
     print("\nFinal Result Dictionary:", result)
     return result
 
