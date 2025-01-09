@@ -5,6 +5,12 @@ import time
 
 # Custom CSS for styling
 custom_css = """
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
 .treat-title {
     text-align: center;
     padding: 20px;
@@ -31,7 +37,7 @@ custom_css = """
     font-weight: bold;
 }
 
-.content-box {
+.content-area {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 15px;
     padding: 20px;
@@ -39,7 +45,7 @@ custom_css = """
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.results-box {
+.results-area {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 15px;
     padding: 20px;
@@ -48,10 +54,10 @@ custom_css = """
 }
 
 .gradio-container {
-    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%);
+    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%) !important;
 }
 
-.analyze-button {
+#analyze-btn {
     background-color: #d81b60 !important;
     color: white !important;
     border-radius: 25px !important;
@@ -60,7 +66,7 @@ custom_css = """
     transition: transform 0.2s !important;
 }
 
-.analyze-button:hover {
+#analyze-btn:hover {
     transform: scale(1.05) !important;
 }
 """
@@ -71,7 +77,7 @@ def analyze_with_loading(text, progress=gr.Progress()):
     
     # Simulate initial loading (model preparation)
     for i in range(30):
-        time.sleep(0.1)  # Reduced sleep time for better UX
+        time.sleep(0.1)
         progress((i + 1) / 100)
     
     # Perform actual analysis
@@ -80,7 +86,7 @@ def analyze_with_loading(text, progress=gr.Progress()):
     
     # Simulate final processing
     for i in range(70, 100):
-        time.sleep(0.05)  # Reduced sleep time
+        time.sleep(0.05)
         progress((i + 1) / 100)
     
     # Format the results for display
@@ -92,19 +98,19 @@ def analyze_with_loading(text, progress=gr.Progress()):
         return f"Triggers Detected:\n{trigger_list}"
 
 with gr.Blocks(css=custom_css) as iface:
-    # Title section
-    with gr.Box(elem_classes="treat-title"):
-        gr.HTML("""
+    # Title section using HTML
+    gr.HTML("""
+        <div class="treat-title">
             <h1>TREAT</h1>
             <p><span class="highlight">T</span>rigger 
                <span class="highlight">R</span>ecognition for 
                <span class="highlight">E</span>njoyable and 
                <span class="highlight">A</span>ppropriate 
                <span class="highlight">T</span>elevision</p>
-        """)
+        </div>
+    """)
     
-    # Content input section
-    with gr.Box(elem_classes="content-box"):
+    with gr.Column(elem_classes="content-area"):
         input_text = gr.Textbox(
             label="Content to Analyze",
             placeholder="Paste your content here...",
@@ -113,12 +119,11 @@ with gr.Blocks(css=custom_css) as iface:
     
     # Analysis button
     analyze_btn = gr.Button(
-        "Analyze Content", 
-        elem_classes="analyze-button"
+        "Analyze Content",
+        elem_id="analyze-btn"
     )
     
-    # Results section
-    with gr.Box(elem_classes="results-box"):
+    with gr.Column(elem_classes="results-area"):
         output_text = gr.Textbox(
             label="Analysis Results",
             lines=5,
