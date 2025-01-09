@@ -1,4 +1,3 @@
-# gradio_app.py
 import gradio as gr
 from model.analyzer import analyze_content
 import asyncio
@@ -99,9 +98,8 @@ def analyze_with_loading(text, progress=gr.Progress()):
     # Perform analysis
     progress(0.3, desc="Processing text...")
     try:
-        # Run the async function in a sync context
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(analyze_content(text))
+        # Use asyncio.run to handle the async function call
+        result = asyncio.run(analyze_content(text))
     except Exception as e:
         return f"Error during analysis: {str(e)}"
     
@@ -166,9 +164,9 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     )
 
 if __name__ == "__main__":
-    # Launch with custom configurations
+    # Launch without the 'ssr' argument
     iface.launch(
         share=False,
         debug=True,
-        show_error=True,
+        show_error=True
     )
