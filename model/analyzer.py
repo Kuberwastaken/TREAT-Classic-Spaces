@@ -26,7 +26,7 @@ class ContentAnalyzer:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 use_fast=True,
-                token=os.environ.get("HF_TOKEN")  # Add token here
+                token=os.environ.get("HF_TOKEN")
             )
             
             print(f"Loading model on {self.device}...")
@@ -35,14 +35,13 @@ class ContentAnalyzer:
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 low_cpu_mem_usage=True,
                 device_map="auto",
-                token=os.environ.get("HF_TOKEN")  # Add token here
+                token=os.environ.get("HF_TOKEN")
             )
             return True
         except Exception as e:
             print(f"Model loading error: {str(e)}")
             return False
 
-    # Rest of your code remains exactly the same
     def cleanup(self):
         if self.device == "cuda":
             torch.cuda.empty_cache()
@@ -52,6 +51,7 @@ class ContentAnalyzer:
         mapped_name = category_info["mapped_name"]
         description = category_info["description"]
 
+        print(f"\nAnalyzing for {mapped_name}...")
         prompt = f"""Check this text for any indication of {mapped_name} ({description}).
         Be sensitive to subtle references or implications, make sure the text is not metaphorical.
         Respond concisely with: YES, NO, or MAYBE.
@@ -59,10 +59,12 @@ class ContentAnalyzer:
         Answer:"""
 
         try:
+            print(f"Sending prompt to model...")
             inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
             with torch.no_grad():
+                print("Generating response...")
                 outputs = self.model.generate(
                     **inputs,
                     max_new_tokens=10,
@@ -75,6 +77,14 @@ class ContentAnalyzer:
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip().upper()
             first_word = response.split("\n")[-1].split()[0] if response else "NO"
             
+            print(f"Model response for {mapped_name}: {first_word}")
+            if first_word == "YES":
+                print(f"Detected {mapped_name} in this chunk!")
+            elif first_word == "MAYBE":
+                print(f"Possible {mapped_name} detected, marking for review.")
+            else:
+                print(f"No {mapped_name} detected in this chunk.")
+                
             score = 1 if first_word == "YES" else 0.5 if first_word == "MAYBE" else 0
             return score, first_word
             
@@ -83,6 +93,9 @@ class ContentAnalyzer:
             return 0, "NO"
 
     def analyze_text(self, text):
+        print("\n=== Starting Analysis ===")
+        print(f"Time: {datetime.now()}")
+        
         if not self.load_model():
             return {
                 "detected_triggers": {"0": "Error"},
@@ -95,14 +108,44 @@ class ContentAnalyzer:
         overlap = 15
         script_chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size - overlap)]
 
+        # Using the more detailed trigger categories
         trigger_categories = {
-            "Violence": {"mapped_name": "Violence", "description": "Any act involving physical force or aggression intended to cause harm, injury, or death."},
-            "Death": {"mapped_name": "Death References", "description": "Any mention, implication, or depiction of the loss of life, including direct deaths or abstract references to mortality."},
-            "Substance_Use": {"mapped_name": "Substance Use", "description": "References to consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances."},
-            "Gore": {"mapped_name": "Gore", "description": "Graphic depictions of severe physical injuries, mutilation, or extreme bodily harm."},
-            "Sexual_Content": {"mapped_name": "Sexual Content", "description": "Depictions or mentions of sexual activity, intimacy, or sexual behavior."},
-            "Self_Harm": {"mapped_name": "Self-Harm", "description": "Behaviors where an individual intentionally causes harm to themselves."},
-            "Mental_Health": {"mapped_name": "Mental Health Issues", "description": "References to mental health struggles, disorders, or psychological distress."}
+            "Violence": {
+                "mapped_name": "Violence",
+                "description": "Any act involving physical force or aggression intended to cause harm, injury, or death to a person, animal, or object. Includes direct physical confrontations, implied violence, or large-scale events like wars, riots, or violent protests."
+            },
+            "Death": {
+                "mapped_name": "Death References",
+                "description": "Any mention, implication, or depiction of the loss of life, including direct deaths of characters, mentions of deceased individuals, or abstract references to mortality."
+            },
+            "Substance_Use": {
+                "mapped_name": "Substance Use",
+                "description": "Any explicit or implied reference to the consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances."
+            },
+            "Gore": {
+                "mapped_name": "Gore",
+                "description": "Extremely detailed and graphic depictions of highly severe physical injuries, mutilation, or extreme bodily harm."
+            },
+            "Sexual_Content": {
+                "mapped_name": "Sexual Content",
+                "description": "Any depiction or mention of sexual activity, intimacy, or sexual behavior."
+            },
+            "Self_Harm": {
+                "mapped_name": "Self-Harm",
+                "description": "Any mention or depiction of behaviors where an individual intentionally causes harm to themselves."
+            },
+            "Gun_Use": {
+                "mapped_name": "Gun Use",
+                "description": "Any explicit or implied mention of firearms being handled, fired, or used in a threatening manner."
+            },
+            "Animal_Cruelty": {
+                "mapped_name": "Animal Cruelty",
+                "description": "Any act of harm, abuse, or neglect toward animals, whether intentional or accidental."
+            },
+            "Mental_Health": {
+                "mapped_name": "Mental Health Issues",
+                "description": "Any reference to mental health struggles, disorders, or psychological distress."
+            }
         }
 
         identified_triggers = {}
@@ -119,6 +162,7 @@ class ContentAnalyzer:
         final_triggers = [category for category, count in identified_triggers.items() if count > 0.5]
         self.cleanup()
 
+        print("\n=== Analysis Complete ===")
         if not final_triggers:
             result = {
                 "detected_triggers": {"0": "None"},
@@ -134,7 +178,8 @@ class ContentAnalyzer:
                 "model": self.model_name,
                 "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
-
+        
+        print("\nFinal Result:", result)
         return result
 
 def analyze_content(text):
