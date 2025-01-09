@@ -25,7 +25,7 @@ def analyze_script(script):
         # Load model with token authentication
         model = AutoModelForCausalLM.from_pretrained(
             "meta-llama/Llama-3.2-1B",
-            use_auth_token=hf_token,  # Pass the token to authenticate
+            token=hf_token,  # Pass the token to authenticate
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,  # Use 16-bit precision for CUDA, 32-bit for CPU
             device_map="auto"  # Automatically map model to available device
         )
@@ -188,11 +188,12 @@ def analyze_script(script):
 
     return final_triggers
 
+# Define the Gradio interface
 def analyze_content(script):
-    # Simulate trigger analysis (you can replace this with your actual logic)
+    # Perform the analysis on the input script using the analyze_script function
     triggers = analyze_script(script)
-    
-    # Define the result based on triggers found
+
+    # Define the result based on the triggers found
     if isinstance(triggers, list) and triggers != ["None"]:
         result = {
             "detected_triggers": triggers,
@@ -207,7 +208,7 @@ def analyze_content(script):
             "model": "Llama-3.2-1B",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-    
+
     print("\nFinal Result Dictionary:", result)
     return result
 
