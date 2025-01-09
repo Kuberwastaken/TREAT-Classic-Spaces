@@ -2,6 +2,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from datetime import datetime
 import gc
+import json
+import gradio as gr
 
 class ContentAnalyzer:
     def __init__(self):
@@ -72,10 +74,15 @@ class ContentAnalyzer:
     def analyze_text(self, text):
         """Main analysis function"""
         if not self.load_model():
-            return {"error": "Model loading failed"}
+            return {
+                "detected_triggers": {"0": "Error"},
+                "confidence": "Low - Model loading failed",
+                "model": self.model_name,
+                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
 
-        chunk_size = 256  # Set the chunk size for text processing
-        overlap = 15  # Overlap between chunks for context preservation
+        chunk_size = 256
+        overlap = 15
         script_chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size - overlap)]
 
         trigger_categories = {
@@ -102,30 +109,44 @@ class ContentAnalyzer:
         final_triggers = [category for category, count in identified_triggers.items() if count > 0.5]
         self.cleanup()
 
+        # Format the output as requested
         if not final_triggers:
-            final_triggers = ["None"]
+            result = {
+                "detected_triggers": {"0": "None"},
+                "confidence": "High - No concerning content detected",
+                "model": self.model_name,
+                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        else:
+            triggers_dict = {str(i): trigger for i, trigger in enumerate(final_triggers)}
+            result = {
+                "detected_triggers": triggers_dict,
+                "confidence": "High - Content detected",
+                "model": self.model_name,
+                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
 
-        return final_triggers
+        return result
 
-def get_detailed_analysis(script):
+def analyze_content(text):
+    """Function to be called from Gradio interface"""
     analyzer = ContentAnalyzer()
-    print("\n=== Starting Detailed Analysis ===")
-    triggers = analyzer.analyze_text(script)
-    
-    if isinstance(triggers, list) and triggers != ["None"]:
-        result = {
-            "detected_triggers": triggers,
-            "confidence": "High - Content detected",
-            "model": "Llama-3.2-1B",
-            "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-    else:
-        result = {
-            "detected_triggers": ["None"],
-            "confidence": "High - No concerning content detected",
-            "model": "Llama-3.2-1B",
-            "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+    result = analyzer.analyze_text(text)
+    return json.dumps(result, indent=2)
 
-    print("\nFinal Result Dictionary:", result)
-    return result
+# Gradio interface
+def gradio_interface(text):
+    return analyze_content(text)
+
+# Create and launch the Gradio interface
+iface = gr.Interface(
+    fn=gradio_interface,
+    inputs=gr.Textbox(lines=8, label="Input Text"),
+    outputs=gr.JSON(),
+    title="Content Analysis",
+    description="Analyze text content for sensitive topics"
+)
+
+# Launch the interface
+if __name__ == "__main__":
+    iface.launch()
