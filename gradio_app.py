@@ -135,7 +135,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
             )
     
     # Button section
-    with gr.Row(justify="center"):
+    with gr.Row(alignment="center"):
         analyze_btn = gr.Button(
             "✨ Analyze Content",
             variant="primary"
