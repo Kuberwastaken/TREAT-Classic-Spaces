@@ -6,7 +6,7 @@ import time
 # Custom CSS for styling
 custom_css = """
 .gradio-container {
-background: linear-gradient(135deg, #d81b60 0%, #1a237e 100%) !important;
+background: linear-gradient(135deg, #f06292 0%, #5c6bc0 100%) !important;
 }
 
 .treat-title {
