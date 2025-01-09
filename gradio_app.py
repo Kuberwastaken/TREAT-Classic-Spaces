@@ -81,6 +81,20 @@ label {
     justify-content: center;
     align-items: center;
 }
+
+.footer {
+    text-align: center;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 0;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #6366f1;
+}
+
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
@@ -162,6 +176,14 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
         outputs=[output_text],
         api_name="analyze"
     )
+
+    #Footer section
+    gr.HTML("""
+       <div class="footer">
+           <p>Made with 💖 by Kuber Mehta</p>
+       </div>
+    """)
+
 
 if __name__ == "__main__":
     # Launch without the 'ssr' argument
