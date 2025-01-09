@@ -1,3 +1,4 @@
+import gradio as gr
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from datetime import datetime
@@ -12,7 +13,6 @@ class ContentAnalyzer:
         self.model = None
         
     def load_model(self):
-        """Load model with memory optimization"""
         try:
             print("Loading tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
@@ -30,13 +30,11 @@ class ContentAnalyzer:
             return False
 
     def cleanup(self):
-        """Clean up GPU memory"""
         if self.device == "cuda":
             torch.cuda.empty_cache()
         gc.collect()
 
     def analyze_chunk(self, chunk, category_info):
-        """Analyze a single chunk of text for a specific trigger"""
         mapped_name = category_info["mapped_name"]
         description = category_info["description"]
 
@@ -71,7 +69,6 @@ class ContentAnalyzer:
             return 0, "NO"
 
     def analyze_text(self, text):
-        """Main analysis function"""
         if not self.load_model():
             return {
                 "detected_triggers": {"0": "Error"},
@@ -108,7 +105,6 @@ class ContentAnalyzer:
         final_triggers = [category for category, count in identified_triggers.items() if count > 0.5]
         self.cleanup()
 
-        # Format the output as requested
         if not final_triggers:
             result = {
                 "detected_triggers": {"0": "None"},
@@ -128,7 +124,18 @@ class ContentAnalyzer:
         return result
 
 def analyze_content(text):
-    """Function to be called from Gradio interface"""
     analyzer = ContentAnalyzer()
     result = analyzer.analyze_text(text)
     return json.dumps(result, indent=2)
+
+# Create and launch the Gradio interface
+iface = gr.Interface(
+    fn=analyze_content,
+    inputs=gr.Textbox(lines=8, label="Input Text"),
+    outputs=gr.JSON(),
+    title="Content Analysis",
+    description="Analyze text content for sensitive topics"
+)
+
+if __name__ == "__main__":
+    iface.launch()
