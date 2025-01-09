@@ -25,7 +25,7 @@ def analyze_script(script):
         # Load model with token authentication
         model = AutoModelForCausalLM.from_pretrained(
             "meta-llama/Llama-3.2-1B",
-            use_auth_token=hf_token,  # Pass the token to authenticate
+            token=hf_token,  # Pass the token to authenticate
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,  # Use 16-bit precision for CUDA, 32-bit for CPU
             device_map="auto"  # Automatically map model to available device
         )
