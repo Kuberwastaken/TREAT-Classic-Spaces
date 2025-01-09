@@ -3,7 +3,7 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 
-# Custom CSS for dark theme, animations, and purple accent color
+# Custom CSS for dark theme, animations, and new accent color
 custom_css = """
 .gradio-container {
     background: #121212 !important;
@@ -24,20 +24,32 @@ custom_css = """
 
 .treat-title h1 {
     font-size: 5em;
-    color: #6366f1;
+    color: #4f46e5;
     margin-bottom: 10px;
     font-weight: bold;
     animation: fadeInText 1.5s ease-out;
 }
 
-.treat-title p {
-    font-size: 1.3em;
-    color: #6366f1;
+.treat-title span {
+    color: #fff;
+}
+
+.treat-title .web {
+    font-size: 0.4em;
+    color: #4f46e5;
+    margin-top: -15px;
+    display: block;
     animation: fadeInText 1.5s ease-out 0.5s;
 }
 
+.treat-title p {
+    font-size: 1.3em;
+    color: #fff;
+    animation: fadeInText 1.5s ease-out 1s;
+}
+
 .highlight {
-    color: #6366f1;
+    color: #4f46e5;
     font-weight: bold;
 }
 
@@ -62,11 +74,11 @@ custom_css = """
 }
 
 .gradio-textbox textarea:focus {
-    border-color: #6366f1 !important;
+    border-color: #4f46e5 !important;
 }
 
 .gradio-button {
-    background-color: #6366f1 !important;
+    background-color: #4f46e5 !important;
     color: white !important;
     border: none !important;
     border-radius: 25px !important;
@@ -78,12 +90,12 @@ custom_css = """
 
 .gradio-button:hover {
     transform: scale(1.1) !important;
-    background-color: #5749d3 !important;
+    background-color: #3e38c2 !important;
 }
 
 .gradio-button:active {
     transform: scale(0.98) !important;
-    background-color: #4b40bb !important;
+    background-color: #3530a8 !important;
 }
 
 label {
@@ -108,7 +120,7 @@ label {
 }
 
 .footer p {
-    color: #6366f1;
+    color: #4f46e5;
 }
 
 @keyframes slideInFromTop {
@@ -166,11 +178,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     gr.HTML("""
         <div class="treat-title">
             <h1>TREAT</h1>
-            <p><span class="highlight">T</span>rigger 
-               <span class="highlight">R</span>ecognition for 
-               <span class="highlight">E</span>njoyable and 
-               <span class="highlight">A</span>ppropriate 
-               <span class="highlight">T</span>elevision</p>
+            <span>Trigger Recognition for Enjoyable and Appropriate Television</span>
+            <div class="web">WEB</div>
         </div>
     """)
     
