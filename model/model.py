@@ -1,19 +1,3 @@
-# File: app.py (Put this in the root directory)
-import gradio as gr
-from model.model import analyze_content
-
-iface = gr.Interface(
-    fn=analyze_content,
-    inputs=gr.Textbox(lines=8, label="Input Text"),
-    outputs=gr.JSON(),
-    title="Content Analysis",
-    description="Analyze text content for sensitive topics"
-)
-
-if __name__ == "__main__":
-    iface.launch()
-
-# File: model/model.py (Create a model directory and put this file inside)
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from datetime import datetime
