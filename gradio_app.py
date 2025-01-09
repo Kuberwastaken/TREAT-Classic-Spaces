@@ -5,6 +5,10 @@ import time
 
 # Custom CSS for dark theme, animations, and purple accent color
 custom_css = """
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
 .gradio-container {
     background: #121212 !important;
     color: #fff !important;
