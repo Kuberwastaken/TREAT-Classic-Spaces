@@ -96,7 +96,7 @@ class ContentAnalyzer:
         for chunk_idx, chunk in enumerate(script_chunks, 1):
             print(f"\n--- Processing Chunk {chunk_idx}/{len(script_chunks)} ---")
             for category, info in trigger_categories.items():
-                score, response = self.analyze_chunk(chunk, info)
+                _, response = self.analyze_chunk(chunk, info)
                 if response == "YES":
                     identified_triggers[category] = identified_triggers.get(category, 0) + 1
                 elif response == "MAYBE":
