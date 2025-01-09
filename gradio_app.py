@@ -1,172 +1,137 @@
+# gradio_app.py
 import gradio as gr
-import time
 from model.analyzer import analyze_content
+import time
 
-# Custom CSS for the interface
-css = """
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
-
-#treat-container {
-    background: linear-gradient(135deg, #ffE6F0 0%, #E6F0FF 100%);
-    padding: 2rem;
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    font-family: 'Nunito', sans-serif;
+# Custom CSS for styling
+custom_css = """
+.treat-title {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%);
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-#treat-title {
-    text-align: center;
-    color: #FF69B4;
-    font-size: 3.5rem;
+.treat-title h1 {
+    font-size: 3em;
+    color: #d81b60;
+    margin-bottom: 10px;
     font-weight: bold;
-    margin-bottom: 0.5rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
 }
 
-#treat-subtitle {
-    text-align: center;
-    color: #666;
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
+.treat-title p {
+    font-size: 1.2em;
+    color: #5c6bc0;
 }
 
-#treat-subtitle span {
-    color: #FF69B4;
+.highlight {
+    color: #d81b60;
     font-weight: bold;
 }
 
 .content-box {
-    background: rgba(255,255,255,0.9);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 15px;
-    border: 2px solid #FFB6C1;
-    padding: 1rem;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.results-box {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.gradio-container {
+    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%);
 }
 
 .analyze-button {
-    background: linear-gradient(45deg, #FF69B4, #87CEEB) !important;
-    border: none !important;
-    border-radius: 25px !important;
+    background-color: #d81b60 !important;
     color: white !important;
-    font-family: 'Nunito', sans-serif !important;
-    font-weight: bold !important;
-    padding: 0.8rem 2rem !important;
+    border-radius: 25px !important;
+    padding: 10px 20px !important;
+    font-size: 1.1em !important;
     transition: transform 0.2s !important;
 }
 
 .analyze-button:hover {
-    transform: translateY(-2px) !important;
-}
-
-.results-container {
-    background: rgba(255,255,255,0.9);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    border: 2px solid #87CEEB;
-}
-
-#loading-bar {
-    height: 6px;
-    background: linear-gradient(90deg, #FF69B4, #87CEEB);
-    border-radius: 3px;
-    transition: width 0.3s ease;
+    transform: scale(1.05) !important;
 }
 """
 
-def analyze_with_loading(text):
-    # Simulate loading progress (you can integrate this with your actual analysis)
-    for i in range(100):
-        time.sleep(0.02)  # Simulate processing time
-        yield {"progress": i + 1}
+def analyze_with_loading(text, progress=gr.Progress()):
+    # Initialize progress
+    progress(0, desc="Starting analysis...")
     
-    # Perform the actual analysis
+    # Simulate initial loading (model preparation)
+    for i in range(30):
+        time.sleep(0.1)  # Reduced sleep time for better UX
+        progress((i + 1) / 100)
+    
+    # Perform actual analysis
+    progress(0.3, desc="Processing text...")
     result = analyze_content(text)
     
-    # Format the results
-    if result["detected_triggers"] == ["None"]:
-        triggers_text = "No triggers detected"
-    else:
-        triggers_text = ", ".join(result["detected_triggers"])
+    # Simulate final processing
+    for i in range(70, 100):
+        time.sleep(0.05)  # Reduced sleep time
+        progress((i + 1) / 100)
     
-    yield {
-        "progress": 100,
-        "result": f"""
-        <div class='results-container'>
-            <h3 style='color: #FF69B4; margin-bottom: 1rem;'>Analysis Results</h3>
-            <p><strong>Triggers Detected:</strong> {triggers_text}</p>
-            <p><strong>Confidence:</strong> {result['confidence']}</p>
-            <p><strong>Analysis Time:</strong> {result['analysis_timestamp']}</p>
-        </div>
-        """
-    }
+    # Format the results for display
+    triggers = result["detected_triggers"]
+    if triggers == ["None"]:
+        return "No triggers detected in the content."
+    else:
+        trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
+        return f"Triggers Detected:\n{trigger_list}"
 
-with gr.Blocks(css=css) as iface:
-    with gr.Column(elem_id="treat-container"):
+with gr.Blocks(css=custom_css) as iface:
+    # Title section
+    with gr.Box(elem_classes="treat-title"):
         gr.HTML("""
-            <div id="treat-title">TREAT</div>
-            <div id="treat-subtitle">
-                <span>T</span>rigger <span>R</span>ecognition for 
-                <span>E</span>njoyable and <span>A</span>ppropriate 
-                <span>T</span>elevision
-            </div>
+            <h1>TREAT</h1>
+            <p><span class="highlight">T</span>rigger 
+               <span class="highlight">R</span>ecognition for 
+               <span class="highlight">E</span>njoyable and 
+               <span class="highlight">A</span>ppropriate 
+               <span class="highlight">T</span>elevision</p>
         """)
-        
-        text_input = gr.Textbox(
-            label="Enter your content for analysis",
-            placeholder="Paste your script or content here...",
-            lines=8,
-            elem_classes=["content-box"]
+    
+    # Content input section
+    with gr.Box(elem_classes="content-box"):
+        input_text = gr.Textbox(
+            label="Content to Analyze",
+            placeholder="Paste your content here...",
+            lines=8
         )
-        
-        analyze_btn = gr.Button(
-            "🍬 Analyze Content",
-            elem_classes=["analyze-button"]
+    
+    # Analysis button
+    analyze_btn = gr.Button(
+        "Analyze Content", 
+        elem_classes="analyze-button"
+    )
+    
+    # Results section
+    with gr.Box(elem_classes="results-box"):
+        output_text = gr.Textbox(
+            label="Analysis Results",
+            lines=5,
+            readonly=True
         )
-        
-        progress = gr.Number(
-            value=0,
-            visible=False,
-            elem_id="progress-value"
-        )
-        
-        gr.HTML("""
-            <div style="width: 100%; height: 6px; background: #eee; border-radius: 3px; margin: 1rem 0;">
-                <div id="loading-bar" style="width: 0%"></div>
-            </div>
-        """)
-        
-        output = gr.HTML()
-        
-        # JavaScript for updating the loading bar
-        gr.HTML("""
-            <script>
-                function updateLoadingBar(progress) {
-                    document.getElementById('loading-bar').style.width = progress + '%';
-                }
-                
-                // Watch for changes to the progress value
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                            const progress = document.getElementById('progress-value').value;
-                            updateLoadingBar(progress);
-                        }
-                    });
-                });
-                
-                // Start observing the progress value element
-                observer.observe(document.getElementById('progress-value'), {
-                    attributes: true
-                });
-            </script>
-        """)
-        
-        analyze_btn.click(
-            fn=analyze_with_loading,
-            inputs=[text_input],
-            outputs=[gr.State({"progress": 0, "result": ""}), output],
-            show_progress=False
-        )
+    
+    # Set up the click event
+    analyze_btn.click(
+        fn=analyze_with_loading,
+        inputs=[input_text],
+        outputs=[output_text],
+        api_name="analyze"
+    )
 
 if __name__ == "__main__":
     iface.launch()
