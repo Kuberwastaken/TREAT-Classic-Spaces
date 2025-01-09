@@ -1,21 +1,20 @@
 # gradio_app.py
 import gradio as gr
 from model.analyzer import analyze_content
+import asyncio
 import time
 
 # Custom CSS for styling
 custom_css = """
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+.gradio-container {
+    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%) !important;
 }
 
 .treat-title {
     text-align: center;
     padding: 20px;
     margin-bottom: 20px;
-    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 15px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -37,68 +36,84 @@ custom_css = """
     font-weight: bold;
 }
 
-.content-area {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    padding: 20px;
-    margin: 20px 0;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+.content-area, .results-area {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    margin: 20px 0 !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-.results-area {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    padding: 20px;
-    margin-top: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Input/Output styling */
+.gradio-textbox textarea {
+    background-color: white !important;
+    color: #333 !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
 }
 
-.gradio-container {
-    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%) !important;
-}
-
-#analyze-btn {
+.gradio-button {
     background-color: #d81b60 !important;
     color: white !important;
+    border: none !important;
     border-radius: 25px !important;
     padding: 10px 20px !important;
     font-size: 1.1em !important;
     transition: transform 0.2s !important;
+    margin: 10px 0 !important;
 }
 
-#analyze-btn:hover {
+.gradio-button:hover {
     transform: scale(1.05) !important;
+    background-color: #c2185b !important;
+}
+
+/* Label styling */
+label {
+    color: #333 !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
 }
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
+    """
+    Synchronous wrapper for the async analyze_content function
+    """
     # Initialize progress
     progress(0, desc="Starting analysis...")
     
-    # Simulate initial loading (model preparation)
+    # Initial setup phase
     for i in range(30):
-        time.sleep(0.1)
+        time.sleep(0.02)  # Reduced sleep time
         progress((i + 1) / 100)
     
-    # Perform actual analysis
+    # Perform analysis
     progress(0.3, desc="Processing text...")
-    result = analyze_content(text)
+    try:
+        # Run the async function in a sync context
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(analyze_content(text))
+    except Exception as e:
+        return f"Error during analysis: {str(e)}"
     
-    # Simulate final processing
+    # Final processing
     for i in range(70, 100):
-        time.sleep(0.05)
+        time.sleep(0.02)  # Reduced sleep time
         progress((i + 1) / 100)
     
-    # Format the results for display
+    # Format the results
     triggers = result["detected_triggers"]
     if triggers == ["None"]:
-        return "No triggers detected in the content."
+        return "✓ No triggers detected in the content."
     else:
         trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
-        return f"Triggers Detected:\n{trigger_list}"
+        return f"⚠ Triggers Detected:\n{trigger_list}"
 
-with gr.Blocks(css=custom_css) as iface:
-    # Title section using HTML
+# Create the Gradio interface
+with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
+    # Title section
     gr.HTML("""
         <div class="treat-title">
             <h1>TREAT</h1>
@@ -110,25 +125,30 @@ with gr.Blocks(css=custom_css) as iface:
         </div>
     """)
     
-    with gr.Column(elem_classes="content-area"):
-        input_text = gr.Textbox(
-            label="Content to Analyze",
-            placeholder="Paste your content here...",
-            lines=8
+    # Content input section
+    with gr.Row():
+        with gr.Column(elem_classes="content-area"):
+            input_text = gr.Textbox(
+                label="Content to Analyze",
+                placeholder="Paste your content here...",
+                lines=8
+            )
+    
+    # Button section
+    with gr.Row(justify="center"):
+        analyze_btn = gr.Button(
+            "✨ Analyze Content",
+            variant="primary"
         )
     
-    # Analysis button
-    analyze_btn = gr.Button(
-        "Analyze Content",
-        elem_id="analyze-btn"
-    )
-    
-    with gr.Column(elem_classes="results-area"):
-        output_text = gr.Textbox(
-            label="Analysis Results",
-            lines=5,
-            interactive=False  # This replaces 'readonly'
-        )
+    # Results section
+    with gr.Row():
+        with gr.Column(elem_classes="results-area"):
+            output_text = gr.Textbox(
+                label="Analysis Results",
+                lines=5,
+                interactive=False
+            )
     
     # Set up the click event
     analyze_btn.click(
@@ -139,4 +159,10 @@ with gr.Blocks(css=custom_css) as iface:
     )
 
 if __name__ == "__main__":
-    iface.launch()
+    # Launch with custom configurations
+    iface.launch(
+        share=False,
+        debug=True,
+        show_error=True,
+        ssr=False  # Disable SSR to prevent potential issues
+    )
