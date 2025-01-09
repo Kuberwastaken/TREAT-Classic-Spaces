@@ -164,12 +164,12 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
         api_name="analyze"
     )
 
-    #Footer section
     gr.HTML("""
-       <div class="footer">
-           <p>Made with 💖 by Kuber Mehta</p>
-       </div>
+        <div class="footer" style="text-align: center;">
+            <p>Made with 💖 by Kuber Mehta</p>
+        </div>
     """)
+
 
 
 if __name__ == "__main__":
