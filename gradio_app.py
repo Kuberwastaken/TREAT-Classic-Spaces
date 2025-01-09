@@ -75,6 +75,13 @@ label {
     font-weight: 500 !important;
     margin-bottom: 8px !important;
 }
+
+/* Center alignment for button */
+.center-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
@@ -135,7 +142,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
             )
     
     # Button section
-    with gr.Row(alignment="center"):
+    with gr.Row(elem_classes="center-row"):
         analyze_btn = gr.Button(
             "✨ Analyze Content",
             variant="primary"
