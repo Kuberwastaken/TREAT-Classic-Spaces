@@ -127,7 +127,7 @@ with gr.Blocks(css=custom_css) as iface:
         output_text = gr.Textbox(
             label="Analysis Results",
             lines=5,
-            readonly=True
+            interactive=False  # This replaces 'readonly'
         )
     
     # Set up the click event
