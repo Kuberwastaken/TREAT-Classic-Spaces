@@ -4,6 +4,8 @@ import torch
 from datetime import datetime
 import gc
 import json
+import os
+from huggingface_hub import login
 
 class ContentAnalyzer:
     def __init__(self):
@@ -11,24 +13,36 @@ class ContentAnalyzer:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer = None
         self.model = None
+        # Authenticate with Hugging Face
+        if "HF_TOKEN" in os.environ:
+            print("Authenticating with Hugging Face...")
+            login(token=os.environ["HF_TOKEN"])
+        else:
+            print("Warning: HF_TOKEN not found in environment variables")
         
     def load_model(self):
         try:
             print("Loading tokenizer...")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                use_fast=True,
+                token=os.environ.get("HF_TOKEN")  # Add token here
+            )
             
             print(f"Loading model on {self.device}...")
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 low_cpu_mem_usage=True,
-                device_map="auto"
+                device_map="auto",
+                token=os.environ.get("HF_TOKEN")  # Add token here
             )
             return True
         except Exception as e:
             print(f"Model loading error: {str(e)}")
             return False
 
+    # Rest of your code remains exactly the same
     def cleanup(self):
         if self.device == "cuda":
             torch.cuda.empty_cache()
@@ -96,7 +110,7 @@ class ContentAnalyzer:
         for chunk_idx, chunk in enumerate(script_chunks, 1):
             print(f"\n--- Processing Chunk {chunk_idx}/{len(script_chunks)} ---")
             for category, info in trigger_categories.items():
-                _, response = self.analyze_chunk(chunk, info)
+                score, response = self.analyze_chunk(chunk, info)
                 if response == "YES":
                     identified_triggers[category] = identified_triggers.get(category, 0) + 1
                 elif response == "MAYBE":
@@ -127,15 +141,3 @@ def analyze_content(text):
     analyzer = ContentAnalyzer()
     result = analyzer.analyze_text(text)
     return json.dumps(result, indent=2)
-
-# Create and launch the Gradio interface
-iface = gr.Interface(
-    fn=analyze_content,
-    inputs=gr.Textbox(lines=8, label="Input Text"),
-    outputs=gr.JSON(),
-    title="Content Analysis",
-    description="Analyze text content for sensitive topics"
-)
-
-if __name__ == "__main__":
-    iface.launch()

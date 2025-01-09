@@ -4,3 +4,5 @@ torch
 gradio
 transformers
 accelerate
+safetensors
+huggingface-hub
