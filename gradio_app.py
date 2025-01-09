@@ -3,83 +3,127 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 
-# Custom CSS for styling
+# Custom CSS for dark theme and modern animations
 custom_css = """
 .gradio-container {
-background: linear-gradient(135deg, #f06292 0%, #5c6bc0 100%) !important;
+    background: #121212 !important;
+    color: #fff !important;
+    overflow: hidden;
+    transition: background 0.5s ease;
 }
 
 .treat-title {
     text-align: center;
-    padding: 20px;
-    margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    margin-bottom: 30px;
+    background: rgba(18, 18, 18, 0.85);
     border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    animation: slideInFromTop 1s ease-out;
 }
 
 .treat-title h1 {
-    font-size: 3em;
-    color: #6366f1;
+    font-size: 3.5em;
+    color: #ffa726;
     margin-bottom: 10px;
     font-weight: bold;
+    animation: fadeInText 1.5s ease-out;
 }
 
 .treat-title p {
-    font-size: 1.2em;
-    color: #5c6bc0;
+    font-size: 1.3em;
+    color: #ff7043;
+    animation: fadeInText 1.5s ease-out 0.5s;
 }
 
 .highlight {
-    color: #6366f1;
+    color: #ffa726;
     font-weight: bold;
 }
 
 .content-area, .results-area {
-    background: rgba(255, 255, 255, 0.9) !important;
+    background: rgba(33, 33, 33, 0.9) !important;
     border-radius: 15px !important;
-    padding: 20px !important;
+    padding: 30px !important;
     margin: 20px 0 !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5) !important;
+    opacity: 0;
+    animation: fadeInUp 1s forwards;
 }
 
-/* Input/Output styling */
 .gradio-textbox textarea {
-    background-color: white !important;
-    color: #333 !important;
-    border: 1px solid #ddd !important;
+    background-color: #333 !important;
+    color: #fff !important;
+    border: 1px solid #444 !important;
     border-radius: 8px !important;
-    padding: 10px !important;
+    padding: 12px !important;
+    font-size: 1.1em !important;
+    transition: border-color 0.3s ease;
+}
+
+.gradio-textbox textarea:focus {
+    border-color: #ffa726 !important;
 }
 
 .gradio-button {
-    background-color: #6366f1 !important;
+    background-color: #ff7043 !important;
     color: white !important;
     border: none !important;
     border-radius: 25px !important;
-    padding: 10px 20px !important;
-    font-size: 1.1em !important;
-    transition: transform 0.2s !important;
-    margin: 10px 0 !important;
+    padding: 12px 24px !important;
+    font-size: 1.2em !important;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    margin: 20px 0 !important;
 }
 
 .gradio-button:hover {
-    transform: scale(1.05) !important;
-    background-color: #c2185b !important;
+    transform: scale(1.1) !important;
+    background-color: #ffa726 !important;
 }
 
-/* Label styling */
+.gradio-button:active {
+    transform: scale(0.98) !important;
+    background-color: #fb8c00 !important;
+}
+
 label {
-    color: #333 !important;
+    color: #ccc !important;
     font-weight: 500 !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 10px !important;
 }
 
-/* Center alignment for button */
 .center-row {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 1.2em;
+    color: #bdbdbd;
+    opacity: 0;
+    animation: fadeInUp 1s forwards 1.5s;
+}
+
+.footer p {
+    color: #ffa726;
+}
+
+@keyframes slideInFromTop {
+    0% { transform: translateY(-50px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeInText {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 """
@@ -137,7 +181,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
             input_text = gr.Textbox(
                 label="Content to Analyze",
                 placeholder="Paste your content here...",
-                lines=8
+                lines=8,
+                interactive=True
             )
     
     # Button section
@@ -164,13 +209,12 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
         api_name="analyze"
     )
 
+    # Footer section
     gr.HTML("""
-        <div class="footer" style="text-align: center;">
+        <div class="footer">
             <p>Made with 💖 by Kuber Mehta</p>
         </div>
     """)
-
-
 
 if __name__ == "__main__":
     # Launch without the 'ssr' argument
