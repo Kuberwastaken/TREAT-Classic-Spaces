@@ -1,9 +1,24 @@
+# File: app.py (Put this in the root directory)
+import gradio as gr
+from model.model import analyze_content
+
+iface = gr.Interface(
+    fn=analyze_content,
+    inputs=gr.Textbox(lines=8, label="Input Text"),
+    outputs=gr.JSON(),
+    title="Content Analysis",
+    description="Analyze text content for sensitive topics"
+)
+
+if __name__ == "__main__":
+    iface.launch()
+
+# File: model/model.py (Create a model directory and put this file inside)
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from datetime import datetime
 import gc
 import json
-import gradio as gr
 
 class ContentAnalyzer:
     def __init__(self):
@@ -133,20 +148,3 @@ def analyze_content(text):
     analyzer = ContentAnalyzer()
     result = analyzer.analyze_text(text)
     return json.dumps(result, indent=2)
-
-# Gradio interface
-def gradio_interface(text):
-    return analyze_content(text)
-
-# Create and launch the Gradio interface
-iface = gr.Interface(
-    fn=gradio_interface,
-    inputs=gr.Textbox(lines=8, label="Input Text"),
-    outputs=gr.JSON(),
-    title="Content Analysis",
-    description="Analyze text content for sensitive topics"
-)
-
-# Launch the interface
-if __name__ == "__main__":
-    iface.launch()
