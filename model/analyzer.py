@@ -73,10 +73,10 @@ class ContentAnalyzer:
                 "mapped_name": "Sexual Abuse",
                 "description": (
                     "Any form of non-consensual sexual act, behavior, or interaction, involving coercion, manipulation, or physical force. "
-                  "This includes incidents of sexual assault, molestation, exploitation, harassment, and any acts where an individual is subjected to sexual acts against their will or without their consent. "
-                  "It also covers discussions or depictions of the aftermath of such abuse, such as trauma, emotional distress, legal proceedings, or therapy. "
-                  "References to inappropriate sexual advances, groping, or any other form of sexual misconduct are also included, as well as the psychological and emotional impact on survivors. "
-                  "Scenes where individuals are placed in sexually compromising situations, even if not directly acted upon, may also fall under this category."
+                    "This includes incidents of sexual assault, molestation, exploitation, harassment, and any acts where an individual is subjected to sexual acts against their will or without their consent. "
+                    "It also covers discussions or depictions of the aftermath of such abuse, such as trauma, emotional distress, legal proceedings, or therapy. "
+                    "References to inappropriate sexual advances, groping, or any other form of sexual misconduct are also included, as well as the psychological and emotional impact on survivors. "
+                    "Scenes where individuals are placed in sexually compromising situations, even if not directly acted upon, may also fall under this category."
                 )
             },
             "Self-Harm": {
@@ -122,7 +122,7 @@ class ContentAnalyzer:
             )
 
             if progress:
-                progress(0.3, "Loading model...")
+                progress(0.15, "Loading model...")
             
             self.model = AutoModelForCausalLM.from_pretrained(
                 "meta-llama/Llama-3.2-1B",
@@ -132,16 +132,55 @@ class ContentAnalyzer:
             )
 
             if progress:
-                progress(0.5, "Model loaded successfully")
+                progress(0.2, "Model loaded successfully")
             
             logger.info(f"Model loaded successfully on {self.device}")
         except Exception as e:
             logger.error(f"Error loading model: {str(e)}")
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 128, overlap: int = 5) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 32) -> List[str]:
         """Split text into overlapping chunks for processing."""
-        return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size - overlap)]
+        chunks = []
+        start = 0
+        text_len = len(text)
+        
+        while start < text_len:
+            end = min(start + chunk_size, text_len)
+            if end < text_len:
+                last_period = max(
+                    text.rfind('. ', start, end),
+                    text.rfind('\n', start, end)
+                )
+                if last_period > start:
+                    end = last_period + 1
+            
+            chunks.append(text[start:end])
+            start = end - overlap
+            
+        return chunks
+
+    def _process_model_response(self, response_text: str) -> float:
+        """Process model response and return a confidence score."""
+        response = response_text.strip().upper()
+        
+        if "YES" in response:
+            evidence_words = ["CLEAR", "DEFINITELY", "EXPLICIT", "STRONG"]
+            return 1.0 if any(word in response for word in evidence_words) else 0.8
+        elif "MAYBE" in response or "POSSIBLE" in response:
+            return 0.5
+        elif "NO" in response:
+            return 0.0
+        
+        positive_indicators = ["PRESENT", "FOUND", "CONTAINS", "SHOWS", "INDICATES"]
+        negative_indicators = ["ABSENT", "NONE", "NOTHING", "LACKS"]
+        
+        if any(indicator in response for indicator in positive_indicators):
+            return 0.7
+        elif any(indicator in response for indicator in negative_indicators):
+            return 0.0
+        
+        return 0.0
 
     async def analyze_chunk(
         self,
@@ -152,16 +191,24 @@ class ContentAnalyzer:
     ) -> Dict[str, float]:
         """Analyze a single chunk of text for triggers."""
         chunk_triggers = {}
+        progress_increment = progress_step / len(self.trigger_categories)
         
         for category, info in self.trigger_categories.items():
             mapped_name = info["mapped_name"]
             description = info["description"]
 
             prompt = f"""
-            Check this text for any indication of {mapped_name} ({description}).
-            Be sensitive to subtle references or implications, make sure the text is not metaphorical.
-            Respond concisely with: YES, NO, or MAYBE.
-            Text: {chunk}
+            Analyze this text carefully for any indication of {mapped_name}.
+            Context: {description}
+            
+            Guidelines:
+            - Consider both explicit and implicit references
+            - Ignore metaphorical or figurative language
+            - Look for concrete evidence in the text
+            
+            Text to analyze: {chunk}
+            
+            Is there evidence of {mapped_name}? Respond with YES, NO, or MAYBE and briefly explain why.
             Answer:
             """
 
@@ -172,24 +219,25 @@ class ContentAnalyzer:
                 with torch.no_grad():
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=5,
+                        max_new_tokens=32,
+                        num_return_sequences=1,
                         do_sample=True,
-                        temperature=0.5,
-                        top_p=0.9,
+                        temperature=0.7,
+                        top_p=0.92,
+                        top_k=50,
+                        repetition_penalty=1.1,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
-                response_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip().upper()
-                first_word = response_text.split("\n")[-1].split()[0] if response_text else "NO"
-
-                if first_word == "YES":
-                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 1
-                elif first_word == "MAYBE":
-                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.5
+                response_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                confidence = self._process_model_response(response_text)
+                
+                if confidence > 0.5:
+                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + confidence
 
                 if progress:
-                    current_progress += progress_step
-                    progress(min(current_progress, 0.9), f"Analyzing {mapped_name}...")
+                    current_progress += progress_increment
+                    progress(min(current_progress, 0.9), f"Analyzing for {mapped_name}...")
 
             except Exception as e:
                 logger.error(f"Error analyzing chunk for {mapped_name}: {str(e)}")
@@ -202,27 +250,41 @@ class ContentAnalyzer:
             await self.load_model(progress)
 
         chunks = self._chunk_text(script)
-        identified_triggers = {}
-        progress_step = 0.4 / (len(chunks) * len(self.trigger_categories))
-        current_progress = 0.5  # Starting after model loading
+        trigger_scores = {}
+        
+        # Calculate progress allocation
+        analysis_progress = 0.7  # 70% of progress for analysis
+        progress_per_chunk = analysis_progress / len(chunks)
+        current_progress = 0.2  # Starting after model loading
+        
+        if progress:
+            progress(current_progress, "Beginning content analysis...")
 
-        for chunk_idx, chunk in enumerate(chunks, 1):
+        for i, chunk in enumerate(chunks):
             chunk_triggers = await self.analyze_chunk(
                 chunk,
                 progress,
                 current_progress,
-                progress_step
+                progress_per_chunk
             )
             
-            for trigger, count in chunk_triggers.items():
-                identified_triggers[trigger] = identified_triggers.get(trigger, 0) + count
+            for trigger, score in chunk_triggers.items():
+                trigger_scores[trigger] = trigger_scores.get(trigger, 0) + score
+            
+            current_progress += progress_per_chunk
+            if progress:
+                chunk_number = i + 1
+                progress(min(0.9, current_progress), 
+                        f"Processing chunk {chunk_number}/{len(chunks)}...")
 
         if progress:
-            progress(0.95, "Finalizing results...")
+            progress(0.95, "Finalizing analysis...")
 
+        # Normalize scores by number of chunks and apply threshold
+        chunk_count = len(chunks)
         final_triggers = [
-            trigger for trigger, count in identified_triggers.items()
-            if count > 0.5
+            trigger for trigger, score in trigger_scores.items()
+            if score / chunk_count > 0.3
         ]
 
         return final_triggers if final_triggers else ["None"]
@@ -235,6 +297,9 @@ async def analyze_content(
     analyzer = ContentAnalyzer()
     
     try:
+        if progress:
+            progress(0.0, "Initializing analyzer...")
+        
         triggers = await analyzer.analyze_script(script, progress)
         
         if progress:
@@ -260,7 +325,7 @@ async def analyze_content(
         }
 
 if __name__ == "__main__":
-    # This section is mainly for testing the analyzer directly
+    # Gradio interface
     iface = gr.Interface(
         fn=analyze_content,
         inputs=gr.Textbox(lines=8, label="Input Text"),

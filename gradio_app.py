@@ -131,38 +131,24 @@ label {
 }
 """
 
-def analyze_with_loading(text, progress=gr.Progress()):
+async def analyze_with_loading(text, progress=gr.Progress()):
     """
-    Synchronous wrapper for the async analyze_content function
+    Asynchronous wrapper for analyze_content that properly tracks progress
     """
-    # Initialize progress
-    progress(0, desc="Starting analysis...")
-    
-    # Initial setup phase
-    for i in range(30):
-        time.sleep(0.02)  # Reduced sleep time
-        progress((i + 1) / 100)
-    
-    # Perform analysis
-    progress(0.3, desc="Processing text...")
     try:
-        # Use asyncio.run to handle the async function call
-        result = asyncio.run(analyze_content(text))
+        # Call analyze_content directly with the progress object
+        result = await analyze_content(text, progress)
+        
+        # Format the results
+        triggers = result["detected_triggers"]
+        if triggers == ["None"]:
+            return "✓ No concerns detected in the content."
+        else:
+            trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
+            return f"⚠ Triggers Detected:\n{trigger_list}"
+            
     except Exception as e:
         return f"Error during analysis: {str(e)}"
-    
-    # Final processing
-    for i in range(70, 100):
-        time.sleep(0.02)  # Reduced sleep time
-        progress((i + 1) / 100)
-    
-    # Format the results
-    triggers = result["detected_triggers"]
-    if triggers == ["None"]:
-        return "✓ No triggers detected in the content."
-    else:
-        trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
-        return f"⚠ Triggers Detected:\n{trigger_list}"
 
 # Create the Gradio interface
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
@@ -220,7 +206,6 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     """)
 
 if __name__ == "__main__":
-    # Launch without the 'ssr' argument
     iface.launch(
         share=False,
         debug=True,
