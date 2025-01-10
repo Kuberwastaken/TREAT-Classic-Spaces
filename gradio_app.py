@@ -3,16 +3,16 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 
-# Custom CSS for dark theme, animations, and purple accent color
 custom_css = """
 * {
     font-family: 'Roboto', sans-serif;
+    transition: all 0.3s ease;
 }
 .gradio-container {
     background: #121212 !important;
     color: #fff !important;
     overflow: hidden;
-    transition: background 0.5s ease;
+    transition: all 0.5s ease;
 }
 .treat-title {
     text-align: center;
@@ -22,6 +22,11 @@ custom_css = """
     border-radius: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     animation: slideInFromTop 1s ease-out;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.treat-title:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
 }
 .treat-title h1 {
     font-size: 5em;
@@ -29,6 +34,10 @@ custom_css = """
     margin-bottom: 10px;
     font-weight: bold;
     animation: fadeInText 1.5s ease-out;
+    transition: color 0.3s ease;
+}
+.treat-title:hover h1 {
+    color: #5749d3;
 }
 .treat-title p {
     font-size: 1.3em;
@@ -38,6 +47,12 @@ custom_css = """
 .highlight {
     color: #4f46e5;
     font-weight: bold;
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+.highlight:hover {
+    color: #5749d3;
+    transform: scale(1.1);
 }
 .content-area, .results-area {
     background: rgba(33, 33, 33, 0.9) !important;
@@ -47,6 +62,11 @@ custom_css = """
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5) !important;
     opacity: 0;
     animation: fadeInUp 1s forwards;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.content-area:hover, .results-area:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.2) !important;
 }
 .gradio-textbox textarea {
     background-color: #333 !important;
@@ -55,10 +75,16 @@ custom_css = """
     border-radius: 8px !important;
     padding: 12px !important;
     font-size: 1.1em !important;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+}
+.gradio-textbox textarea:hover {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 10px rgba(79, 70, 229, 0.2) !important;
 }
 .gradio-textbox textarea:focus {
     border-color: #4f46e5 !important;
+    box-shadow: 0 0 15px rgba(79, 70, 229, 0.3) !important;
+    transform: translateY(-2px);
 }
 .gradio-button {
     background-color: #4f46e5 !important;
@@ -67,21 +93,44 @@ custom_css = """
     border-radius: 25px !important;
     padding: 12px 24px !important;
     font-size: 1.2em !important;
-    transition: transform 0.3s ease, background-color 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin: 20px 0 !important;
+    position: relative;
+    overflow: hidden;
+}
+.gradio-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
 }
 .gradio-button:hover {
-    transform: scale(1.1) !important;
+    transform: scale(1.05) translateY(-2px);
     background-color: #5749d3 !important;
+    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+}
+.gradio-button:hover::before {
+    width: 300px;
+    height: 300px;
 }
 .gradio-button:active {
-    transform: scale(0.98) !important;
+    transform: scale(0.98) translateY(1px);
     background-color: #4b40bb !important;
 }
 label {
     color: #ccc !important;
     font-weight: 500 !important;
     margin-bottom: 10px !important;
+    transition: color 0.3s ease;
+}
+label:hover {
+    color: #fff !important;
 }
 .center-row {
     display: flex;
@@ -95,51 +144,102 @@ label {
     color: #bdbdbd;
     opacity: 0;
     animation: fadeInUp 1s forwards 1.5s;
+    transition: all 0.3s ease;
+}
+.footer:hover {
+    transform: translateY(-3px);
 }
 .footer p {
     color: #4f46e5;
+    transition: all 0.3s ease;
+}
+.footer .heart {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    animation: pulse 1.5s infinite;
+}
+.footer:hover .heart {
+    transform: scale(1.3);
+}
+.footer a {
+    color: #4f46e5;
+    text-decoration: none;
+    position: relative;
+    transition: all 0.3s ease;
+}
+.footer a:hover {
+    color: #5749d3;
+}
+.footer a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: #5749d3;
+    transition: width 0.3s ease;
+}
+.footer a:hover::after {
+    width: 100%;
 }
 footer {
-   visibility: hidden;
+    visibility: hidden;
 }     
+
 @keyframes slideInFromTop {
     0% { transform: translateY(-50px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
 }
 @keyframes fadeInText {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeInUp {
     0% { opacity: 0; transform: translateY(30px); }
     100% { opacity: 1; transform: translateY(0); }
 }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
 """
 
 def analyze_with_loading(text, progress=gr.Progress()):
     """
-    Synchronous wrapper for the async analyze_content function
+    Synchronous wrapper for the async analyze_content function with smooth progress updates
     """
     # Initialize progress
     progress(0, desc="Starting analysis...")
     
-    # Initial setup phase
-    for i in range(30):
-        time.sleep(0.02)  # Reduced sleep time
-        progress((i + 1) / 100)
+    # Initial setup phase - smoother progression
+    for i in range(25):
+        time.sleep(0.04)  # Slightly longer sleep for smoother animation
+        progress((i + 1) / 100, desc="Initializing analysis...")
+    
+    # Pre-processing phase
+    for i in range(25, 45):
+        time.sleep(0.03)
+        progress((i + 1) / 100, desc="Pre-processing content...")
     
     # Perform analysis
-    progress(0.3, desc="Processing text...")
+    progress(0.45, desc="Analyzing content...")
     try:
-        # Use asyncio.run to handle the async function call
         result = asyncio.run(analyze_content(text))
+        
+        # Analysis progress simulation
+        for i in range(45, 75):
+            time.sleep(0.03)
+            progress((i + 1) / 100, desc="Processing results...")
+            
     except Exception as e:
         return f"Error during analysis: {str(e)}"
     
-    # Final processing
-    for i in range(70, 100):
-        time.sleep(0.02)  # Reduced sleep time
-        progress((i + 1) / 100)
+    # Final processing with smooth progression
+    for i in range(75, 100):
+        time.sleep(0.02)
+        progress((i + 1) / 100, desc="Finalizing results...")
     
     # Format the results
     triggers = result["detected_triggers"]
@@ -197,15 +297,14 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
         api_name="analyze"
     )
 
-    # Footer section
+   # Footer section
     gr.HTML("""
         <div class="footer">
-            <p>Made with 💖 by Kuber Mehta</p>
+            <p>Made with <span class="heart">💖</span> by <a href="https://www.linkedin.com/in/kubermehta/" target="_blank">Kuber Mehta</a></p>
         </div>
     """)
 
 if __name__ == "__main__":
-    # Launch without the 'ssr' argument
     iface.launch(
         share=False,
         debug=True,
