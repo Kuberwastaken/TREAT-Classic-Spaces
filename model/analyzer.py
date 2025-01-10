@@ -89,7 +89,7 @@ class ContentAnalyzer:
             print(f"\nAnalyzing for {mapped_name}...")
             prompt = f"""
             Check this text for any clear indication of {mapped_name} ({description}).
-            Be sensitive to subtle references or implications, make sure the text is not metaphorical.
+            only say yes if you are confident, make sure the text is not metaphorical.
             Respond concisely and only with: YES, NO, or MAYBE.
             Text: {chunk}
             Answer:
@@ -106,8 +106,8 @@ class ContentAnalyzer:
                         **inputs,
                         max_new_tokens=2,
                         do_sample=True,
-                        temperature=0.4,
-                        top_p=0.8,
+                        temperature=0.3,
+                        top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
