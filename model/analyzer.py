@@ -60,7 +60,7 @@ class ContentAnalyzer:
             traceback.print_exc()
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 20) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 15) -> List[str]:
         """Split text into overlapping chunks for processing."""
         chunks = []
         for i in range(0, len(text), chunk_size - overlap):
