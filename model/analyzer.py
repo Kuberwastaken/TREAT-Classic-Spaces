@@ -60,7 +60,7 @@ class ContentAnalyzer:
             traceback.print_exc()
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 15) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 5) -> List[str]:
         """Split text into overlapping chunks for processing."""
         chunks = []
         for i in range(0, len(text), chunk_size - overlap):
@@ -104,9 +104,9 @@ class ContentAnalyzer:
                     print("Generating response...")
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=2,
+                        max_new_tokens=3,
                         do_sample=True,
-                        temperature=0.7,
+                        temperature=0.3,
                         top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
