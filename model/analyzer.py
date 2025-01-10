@@ -104,9 +104,9 @@ class ContentAnalyzer:
                     print("Generating response...")
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=5,
+                        max_new_tokens=10,
                         do_sample=True,
-                        temperature=0.6,
+                        temperature=0.4,
                         top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
