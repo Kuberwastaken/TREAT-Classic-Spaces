@@ -88,7 +88,7 @@ class ContentAnalyzer:
 
             print(f"\nAnalyzing for {mapped_name}...")
             prompt = f"""
-            Check this text for any indication of {mapped_name} ({description}).
+            Check this text for any clear indication of {mapped_name} ({description}).
             Be sensitive to subtle references or implications, make sure the text is not metaphorical.
             Respond concisely and ONLY with: YES, NO, or MAYBE.
             Text: {chunk}
@@ -104,9 +104,9 @@ class ContentAnalyzer:
                     print("Generating response...")
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=10,
+                        max_new_tokens=2,
                         do_sample=True,
-                        temperature=0.4,
+                        temperature=0.7,
                         top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
