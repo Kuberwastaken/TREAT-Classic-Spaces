@@ -33,7 +33,7 @@ class ContentAnalyzer:
             
             print("Loading tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "meta-llama/Llama-3.2-1B",
+                "meta-llama/Llama-3.2-3B",
                 use_fast=True
             )
 
@@ -42,7 +42,7 @@ class ContentAnalyzer:
             
             print(f"Loading model on {self.device}...")
             self.model = AutoModelForCausalLM.from_pretrained(
-                "meta-llama/Llama-3.2-1B",
+                "meta-llama/Llama-3.2-3B",
                 token=self.hf_token,
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 device_map="auto"
@@ -278,7 +278,7 @@ async def analyze_content(
         result = {
             "detected_triggers": triggers,
             "confidence": "High - Content detected" if triggers != ["None"] else "High - No concerning content detected",
-            "model": "Llama-3.2-1B",
+            "model": "Llama-3.2-3B",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
@@ -293,7 +293,7 @@ async def analyze_content(
         return {
             "detected_triggers": ["Error occurred during analysis"],
             "confidence": "Error",
-            "model": "Llama-3.2-1B",
+            "model": "Llama-3.2-3B",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "error": str(e)
         }
