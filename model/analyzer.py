@@ -106,7 +106,7 @@ class ContentAnalyzer:
                         **inputs,
                         max_new_tokens=2,
                         do_sample=True,
-                        temperature=0.4,
+                        temperature=0.3,
                         top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
@@ -177,7 +177,7 @@ class ContentAnalyzer:
             "Vomit": {
                         "mapped_name": "Vomit",
                         "description": (
-                            "Any explicit reference to vomiting or related actions. This includes very specific mentions of nausea or the act of vomiting, with more focus on the direct description."
+                            "Any explicit reference to vomiting or related actions. This includes only very specific mentions of nausea or the act of vomiting, with more focus on the direct description, only flag this if you absolutely believe it's present."
                         )
                     },
 
