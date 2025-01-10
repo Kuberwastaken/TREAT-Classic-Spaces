@@ -99,6 +99,9 @@ label {
 .footer p {
     color: #4f46e5;
 }
+footer {
+   visibility: hidden;
+}     
 @keyframes slideInFromTop {
     0% { transform: translateY(-50px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }

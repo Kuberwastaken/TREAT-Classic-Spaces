@@ -172,7 +172,7 @@ class ContentAnalyzer:
                 with torch.no_grad():
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=20,
+                        max_new_tokens=10,
                         do_sample=True,
                         temperature=0.7,
                         top_p=0.8,
