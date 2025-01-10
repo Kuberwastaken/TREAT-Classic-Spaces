@@ -90,7 +90,7 @@ class ContentAnalyzer:
             prompt = f"""
             Check this text for any indication of {mapped_name} ({description}).
             Be sensitive to subtle references or implications, make sure the text is not metaphorical.
-            Respond concisely with: YES, NO, or MAYBE.
+            Respond concisely and ONLY with: YES, NO, or MAYBE.
             Text: {chunk}
             Answer:
             """
@@ -112,17 +112,21 @@ class ContentAnalyzer:
                     )
 
                 response_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip().upper()
-                first_word = response_text.split("\n")[-1].split()[0] if response_text else "NO"
-                print(f"Model response for {mapped_name}: {first_word}")
 
-                if first_word == "YES":
-                    print(f"Detected {mapped_name} in this chunk!")
+                # Scan the entire response for the relevant words
+                if "YES" in response_text:
+                    print(f"{' ' * 16}Detected {mapped_name} in this chunk!")
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 1
-                elif first_word == "MAYBE":
-                    print(f"Possible {mapped_name} detected, marking for further review.")
+                elif "MAYBE" in response_text:
+                    print(f"{' ' * 16}Possible {mapped_name} detected, marking for further review.")
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.5
                 else:
-                    print(f"No {mapped_name} detected in this chunk.")
+                    print(f"{' ' * 16}No {mapped_name} detected in this chunk.")
+
+                if progress:
+                    current_progress += progress_step
+                    progress(min(current_progress, 0.9), f"{' ' * 16}Analyzing {mapped_name}...")
+
 
                 if progress:
                     current_progress += progress_step
