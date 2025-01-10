@@ -60,7 +60,7 @@ class ContentAnalyzer:
             traceback.print_exc()
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 5) -> List[str]:
+    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 20) -> List[str]:
         """Split text into overlapping chunks for processing."""
         chunks = []
         for i in range(0, len(text), chunk_size - overlap):
@@ -90,7 +90,7 @@ class ContentAnalyzer:
             prompt = f"""
             Check this text for any clear indication of {mapped_name} ({description}).
             Be sensitive to subtle references or implications, make sure the text is not metaphorical.
-            Respond concisely and ONLY with: YES, NO, or MAYBE.
+            Respond concisely and only with: YES, NO, or MAYBE.
             Text: {chunk}
             Answer:
             """
@@ -104,10 +104,10 @@ class ContentAnalyzer:
                     print("Generating response...")
                     outputs = self.model.generate(
                         **inputs,
-                        max_new_tokens=3,
+                        max_new_tokens=2,
                         do_sample=True,
-                        temperature=0.3,
-                        top_p=0.9,
+                        temperature=0.4,
+                        top_p=0.8,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
@@ -145,91 +145,85 @@ class ContentAnalyzer:
 
         # Initialize trigger categories (kept from your working script)
         trigger_categories = {
+
             "Violence": {
-                "mapped_name": "Violence",
-                "description": (
-                    "Any act involving physical force or aggression intended to cause harm, injury, or death to a person, animal, or object. "
-                    "Includes direct physical confrontations (e.g., fights, beatings, or assaults), implied violence (e.g., very graphical threats or descriptions of injuries), "
-                    "or large-scale events like wars, riots, or violent protests."
-                )
-            },
+                        "mapped_name": "Violence",
+                        "description": (
+                            "Any act of physical force meant to cause harm, injury, or death, including fights, threats, and large-scale violence like wars or riots."
+                        )
+                    },
+
             "Death": {
-                "mapped_name": "Death References",
-                "description": (
-                    "Any mention, implication, or depiction of the loss of life, including direct deaths of characters, including mentions of deceased individuals, "
-                    "or abstract references to mortality (e.g., 'facing the end' or 'gone forever'). This also covers depictions of funerals, mourning, "
-                    "grieving, or any dialogue that centers around death, do not take metaphors into context that don't actually lead to death."
-                )
-            },
+                        "mapped_name": "Death References",
+                        "description": (
+                            "Mentions or depictions of death, such as characters dying, references to deceased people, funerals, or mourning."
+                        )
+                    },
+
             "Substance Use": {
-                "mapped_name": "Substance Use",
-                "description": (
-                    "Any explicit or implied reference to the consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances. "
-                    "Includes scenes of drinking, smoking, or drug use, whether recreational or addictive. May also cover references to withdrawal symptoms, "
-                    "rehabilitation, or substance-related paraphernalia (e.g., needles, bottles, pipes)."
-                )
-            },
+                        "mapped_name": "Substance Use",
+                        "description": (
+                            "Any reference to using or abusing drugs, alcohol, or other substances, including scenes of drinking, smoking, or drug use."
+                        )
+                    },
+
             "Gore": {
-                "mapped_name": "Gore",
-                "description": (
-                    "Extremely detailed and graphic depictions of highly severe physical injuries, mutilation, or extreme bodily harm, often accompanied by descriptions of heavy blood, exposed organs, "
-                    "or dismemberment. This includes war scenes with severe casualties, horror scenarios involving grotesque creatures, or medical procedures depicted with excessive detail."
-                )
-            },
+                        "mapped_name": "Gore",
+                        "description": (
+                            "Graphic depictions of severe injuries or mutilation, often with detailed blood, exposed organs, or dismemberment."
+                        )
+                    },
+
             "Vomit": {
-                "mapped_name": "Vomit",
-                "description": (
-                      "Any reference to the act of vomiting, whether directly described, implied, or depicted in detail. This includes sounds or visual descriptions of the act, "
-                      "mentions of nausea leading to vomiting, or its aftermath (e.g., the presence of vomit, cleaning it up, or characters reacting to it)."
-                ) 
-            }, 
+                        "mapped_name": "Vomit",
+                        "description": (
+                            "Any explicit reference to vomiting or related actions. This includes very specific mentions of nausea or the act of vomiting, with more focus on the direct description."
+                        )
+                    },
+
             "Sexual Content": {
-                "mapped_name": "Sexual Content",
-                "description": (
-                    "Any depiction or mention of sexual activity, intimacy, or sexual behavior, ranging from implied scenes to explicit descriptions. "
-                    "This includes romantic encounters, physical descriptions of characters in a sexual context, sexual dialogue, or references to sexual themes (e.g., harassment, innuendos)."
-                )
-            },
+                        "mapped_name": "Sexual Content",
+                        "description": (
+                            "Depictions or mentions of sexual activity, intimacy, or behavior, including sexual themes like harassment or innuendo."
+                        )
+                    },
+
             "Sexual Abuse": {
-                "mapped_name": "Sexual Abuse",
-                "description": (
-                    "Any form of non-consensual sexual act, behavior, or interaction, involving coercion, manipulation, or physical force. "
-                  "This includes incidents of sexual assault, molestation, exploitation, harassment, and any acts where an individual is subjected to sexual acts against their will or without their consent. "
-                  "It also covers discussions or depictions of the aftermath of such abuse, such as trauma, emotional distress, legal proceedings, or therapy. "
-                  "References to inappropriate sexual advances, groping, or any other form of sexual misconduct are also included, as well as the psychological and emotional impact on survivors. "
-                  "Scenes where individuals are placed in sexually compromising situations, even if not directly acted upon, may also fall under this category."
-                )
-            },
+                        "mapped_name": "Sexual Abuse",
+                        "description": (
+                            "Explicit non-consensual sexual acts, including assault, molestation, or harassment, and the emotional or legal consequences of such abuse. A stronger focus on detailed depictions or direct references to coercion or violence."
+                        )
+                    },
+
             "Self-Harm": {
-                "mapped_name": "Self-Harm",
-                "description": (
-                   "Any mention or depiction of behaviors where an individual intentionally causes harm to themselves. This includes cutting, burning, or other forms of physical injury, "
-                    "as well as suicidal ideation, suicide attempts, or discussions of self-destructive thoughts and actions. References to scars, bruises, or other lasting signs of self-harm are also included."
-                )
-            },
+                        "mapped_name": "Self-Harm",
+                        "description": (
+                            "Depictions or mentions of intentional self-injury, including acts like cutting, burning, or other self-destructive behavior. Emphasis on more graphic or repeated actions, not implied or casual references."
+                        )
+                    },
+
             "Gun Use": {
-                "mapped_name": "Gun Use",
-                "description": (
-                    "Any explicit or implied mention of firearms being handled, fired, or used in a threatening manner. This includes scenes of gun violence, references to shootings, "
-                    "gun-related accidents, or the presence of firearms in a tense or dangerous context (e.g., holstered weapons during an argument)."
-                )
-            },
+                        "mapped_name": "Gun Use",
+                        "description": (
+                            "Explicit mentions of firearms in use, including threatening actions or accidents involving guns. Only triggers when the gun use is shown in a clear, violent context."
+                        )
+                    },
+
             "Animal Cruelty": {
-                "mapped_name": "Animal Cruelty",
-                "description": (
-                    "Any act of harm, abuse, or neglect toward animals, whether intentional or accidental. This includes physical abuse (e.g., hitting, injuring, or killing animals), "
-                    "mental or emotional mistreatment (e.g., starvation, isolation), and scenes where animals are subjected to pain or suffering for human entertainment or experimentation."
-                )
-            },
+                        "mapped_name": "Animal Cruelty",
+                        "description": (
+                            "Direct or explicit harm, abuse, or neglect of animals, including physical abuse or suffering, and actions performed for human entertainment or experimentation. Triggers only in clear, violent depictions."
+                        )
+                    },
+
             "Mental Health Issues": {
-                "mapped_name": "Mental Health Issues",
-                "description": (
-                    "Any reference to mental health struggles, disorders, or psychological distress. This includes mentions of depression, anxiety, PTSD, bipolar disorder, schizophrenia, "
-                    "or other conditions. Scenes depicting therapy sessions, psychiatric treatment, or coping mechanisms (e.g., medication, journaling) are also included. May cover subtle hints "
-                    "like a character expressing feelings of worthlessness, hopelessness, or detachment from reality."
-                )
-            }
+                        "mapped_name": "Mental Health Issues",
+                        "description": (
+                            "References to psychological struggles, such as depression, anxiety, or PTSD, including therapy or coping mechanisms."
+                        )
+                    }
         }
+
         chunks = self._chunk_text(script)
         identified_triggers = {}
         progress_step = 0.4 / (len(chunks) * len(trigger_categories))
