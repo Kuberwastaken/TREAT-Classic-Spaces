@@ -106,27 +106,23 @@ class ContentAnalyzer:
                         **inputs,
                         max_new_tokens=5,
                         do_sample=True,
-                        temperature=0.3,
+                        temperature=0.6,
                         top_p=0.9,
                         pad_token_id=self.tokenizer.eos_token_id
                     )
 
                 response_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip().upper()
+                first_word = response_text.split("\n")[-1].split()[0] if response_text else "NO"
+                print(f"Model response for {mapped_name}: {first_word}")
 
-                # Scan the entire response for the relevant words
-                if "YES" in response_text:
-                    print(f"{' ' * 16}Detected {mapped_name} in this chunk!")
+                if first_word == "YES":
+                    print(f"Detected {mapped_name} in this chunk!")
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 1
-                elif "MAYBE" in response_text:
-                    print(f"{' ' * 16}Possible {mapped_name} detected, marking for further review.")
+                elif first_word == "MAYBE":
+                    print(f"Possible {mapped_name} detected, marking for further review.")
                     chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.5
                 else:
-                    print(f"{' ' * 16}No {mapped_name} detected in this chunk.")
-
-                if progress:
-                    current_progress += progress_step
-                    progress(min(current_progress, 0.9), f"{' ' * 16}Analyzing {mapped_name}...")
-
+                    print(f"No {mapped_name} detected in this chunk.")
 
                 if progress:
                     current_progress += progress_step
