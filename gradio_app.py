@@ -26,32 +26,32 @@ custom_css = """
 }
 .treat-title:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 8px 16px rgba(106, 13, 173);
 }
 .treat-title h1 {
     font-size: 5em;
-    color: #4f46e5;
+    color: rgb(106, 13, 173);
     margin-bottom: 10px;
     font-weight: bold;
     animation: fadeInText 1.5s ease-out;
     transition: color 0.3s ease;
 }
 .treat-title:hover h1 {
-    color: #5749d3;
+    color: rgb(106, 13, 173);
 }
 .treat-title p {
     font-size: 1.3em;
-    color: #4f46e5;
+    color: rgb(106, 13, 173);
     animation: fadeInText 1.5s ease-out 0.5s;
 }
 .highlight {
-    color: #4f46e5;
+    color: rgb(106, 13, 173);
     font-weight: bold;
     transition: color 0.3s ease, transform 0.3s ease;
     display: inline-block;
 }
 .highlight:hover {
-    color: #5749d3;
+    color: rgb(106, 13, 173);
     transform: scale(1.1);
 }
 .content-area, .results-area {
@@ -66,28 +66,28 @@ custom_css = """
 }
 .content-area:hover, .results-area:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.2) !important;
+    box-shadow: 0 8px 16px rgb(106, 13, 173) !important;
 }
 .gradio-textbox textarea {
     background-color: #333 !important;
     color: #fff !important;
-    border: 1px solid #444 !important;
+    border: 1px solid rgb(106, 13, 173) !important;
     border-radius: 8px !important;
     padding: 12px !important;
     font-size: 1.1em !important;
     transition: all 0.3s ease;
 }
 .gradio-textbox textarea:hover {
-    border-color: #4f46e5 !important;
-    box-shadow: 0 0 10px rgba(79, 70, 229, 0.2) !important;
+    border-color: rgb(106, 13, 173) !important;
+    box-shadow: 0 0 10px rgb(106, 13, 173) !important;
 }
 .gradio-textbox textarea:focus {
-    border-color: #4f46e5 !important;
-    box-shadow: 0 0 15px rgba(79, 70, 229, 0.3) !important;
+    border-color: rgb(106, 13, 173) !important;
+    box-shadow: 0 0 15px rgb(106, 13, 173) !important;
     transform: translateY(-2px);
 }
 .gradio-button {
-    background-color: #4f46e5 !important;
+    background-color: rgb(106, 13, 173) !important;
     color: white !important;
     border: none !important;
     border-radius: 25px !important;
@@ -112,8 +112,8 @@ custom_css = """
 }
 .gradio-button:hover {
     transform: scale(1.05) translateY(-2px);
-    background-color: #5749d3 !important;
-    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+    background-color: rgb(106, 13, 173) !important;
+    box-shadow: 0 6px 15px rgb(106, 13, 173);
 }
 .gradio-button:hover::before {
     width: 300px;
@@ -121,10 +121,17 @@ custom_css = """
 }
 .gradio-button:active {
     transform: scale(0.98) translateY(1px);
-    background-color: #4b40bb !important;
+    background-color: rgb(106, 13, 173) !important;
+
+/* Custom style for the Analyze Content button */
+.gradio-button.primary {
+    background-color: rgb(106, 13, 173) !important;
+    border-color: rgb(106, 13, 173) !important;
+}
+
 }
 label {
-    color: #ccc !important;
+    color: rgb(106, 13, 173) !important;
     font-weight: 500 !important;
     margin-bottom: 10px !important;
     transition: color 0.3s ease;
@@ -150,7 +157,7 @@ label:hover {
     transform: translateY(-3px);
 }
 .footer p {
-    color: #4f46e5;
+    color: rgb(106, 13, 173);
     transition: all 0.3s ease;
 }
 .footer .heart {
@@ -162,13 +169,13 @@ label:hover {
     transform: scale(1.3);
 }
 .footer a {
-    color: #4f46e5;
+    color: rgb(106, 13, 173);
     text-decoration: none;
     position: relative;
     transition: all 0.3s ease;
 }
 .footer a:hover {
-    color: #5749d3;
+    color: rgb(106, 13, 173);
 }
 .footer a::after {
     content: '';
@@ -177,7 +184,7 @@ label:hover {
     height: 2px;
     bottom: -2px;
     left: 0;
-    background-color: #5749d3;
+    background-color: rgb(106, 13, 173);
     transition: width 0.3s ease;
 }
 .footer a:hover::after {
