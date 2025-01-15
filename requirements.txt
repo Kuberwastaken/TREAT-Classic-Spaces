@@ -8,3 +8,6 @@ httpx
 beautifulsoup4
 bs4
 httpx 
+flask
+flask_cors
+transformers
