@@ -2,11 +2,6 @@ import gradio as gr
 from model.analyzer import analyze_content
 import asyncio
 import time
-import httpx
-import subprocess
-import signal
-import atexit
-
 
 custom_css = """
 * {
@@ -217,94 +212,30 @@ footer {
     100% { transform: scale(1); }
 }
 """
-# Start the API server
-def start_api_server():
-    # Start uvicorn in a subprocess
-    process = subprocess.Popen(["uvicorn", "script_search_api:app", "--reload"])
-    return process
-
-# Stop the API server
-def stop_api_server(process):
-    process.terminate()
-
-# Register the exit handler
-api_process = start_api_server()
-atexit.register(stop_api_server, api_process)
-
-async def fetch_and_analyze_script(movie_name, progress=gr.Progress(track_tqdm=True)):
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            # Start the analysis request
-            progress(0.2, desc="Initiating script search...")
-            response = await client.get(
-                f"http://localhost:8000/api/fetch_and_analyze", 
-                params={"movie_name": movie_name}
-            )
-            
-            if response.status_code == 200:
-                # Start progress polling
-                while True:
-                    progress_response = await client.get(
-                        f"http://localhost:8000/api/progress",
-                        params={"movie_name": movie_name}
-                    )
-                    
-                    if progress_response.status_code == 200:
-                        progress_data = progress_response.json()
-                        current_progress = progress_data["progress"]
-                        current_status = progress_data.get("status", "Processing...")
-                        
-                        progress(current_progress, desc=current_status)
-                        
-                        if current_progress >= 1.0:
-                            break
-                            
-                    await asyncio.sleep(0.5)  # Poll every 500ms
-                
-                result = response.json()
-                triggers = result.get("detected_triggers", [])
-                
-                if not triggers or triggers == ["None"]:
-                    formatted_result = "✓ No triggers detected in the content."
-                else:
-                    trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
-                    formatted_result = f"⚠ Triggers Detected:\n{trigger_list}"
-                
-                return formatted_result
-            else:
-                return f"Error: Server returned status code {response.status_code}"
-            
-    except httpx.TimeoutError:
-        return "Error: Request timed out. Please try again."
-    except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
-
-async def track_progress(movie_name, progress):
-    async with httpx.AsyncClient() as client:
-        while True:
-            response = await client.get(f"http://localhost:8000/api/progress", params={"movie_name": movie_name})
-            if response.status_code == 200:
-                progress_data = response.json()
-                progress(progress_data["progress"], desc="Tracking progress...")
-                if progress_data["progress"] >= 1.0:
-                    break
-            await asyncio.sleep(1)
 
 def analyze_with_loading(text, progress=gr.Progress()):
+    """
+    Synchronous wrapper for the async analyze_content function with smooth progress updates
+    """
+    # Initialize progress
     progress(0, desc="Starting analysis...")
     
+    # Initial setup phase - smoother progression
     for i in range(25):
-        time.sleep(0.04)
+        time.sleep(0.04)  # Slightly longer sleep for smoother animation
         progress((i + 1) / 100, desc="Initializing analysis...")
     
+    # Pre-processing phase
     for i in range(25, 45):
         time.sleep(0.03)
         progress((i + 1) / 100, desc="Pre-processing content...")
     
+    # Perform analysis
     progress(0.45, desc="Analyzing content...")
     try:
         result = asyncio.run(analyze_content(text))
         
+        # Analysis progress simulation
         for i in range(45, 75):
             time.sleep(0.03)
             progress((i + 1) / 100, desc="Processing results...")
@@ -312,10 +243,12 @@ def analyze_with_loading(text, progress=gr.Progress()):
     except Exception as e:
         return f"Error during analysis: {str(e)}"
     
+    # Final processing with smooth progression
     for i in range(75, 100):
         time.sleep(0.02)
         progress((i + 1) / 100, desc="Finalizing results...")
     
+    # Format the results
     triggers = result["detected_triggers"]
     if triggers == ["None"]:
         return "✓ No triggers detected in the content."
@@ -323,7 +256,9 @@ def analyze_with_loading(text, progress=gr.Progress()):
         trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
         return f"⚠ Triggers Detected:\n{trigger_list}"
 
+# Create the Gradio interface
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
+    # Title section
     gr.HTML("""
         <div class="treat-title">
             <h1>TREAT</h1>
@@ -335,6 +270,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
         </div>
     """)
     
+    # Content input section
     with gr.Row():
         with gr.Column(elem_classes="content-area"):
             input_text = gr.Textbox(
@@ -343,21 +279,15 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
                 lines=8,
                 interactive=True
             )
-            with gr.Row():
-                search_query = gr.Textbox(
-                    label="Search Movie Scripts",
-                    placeholder="Enter movie title...",
-                    lines=1,
-                    interactive=True
-                )
     
+    # Button section
     with gr.Row(elem_classes="center-row"):
         analyze_btn = gr.Button(
             "✨ Analyze Content",
             variant="primary"
         )
-        search_button = gr.Button("🔍 Search and Analyze Script")
     
+    # Results section
     with gr.Row():
         with gr.Column(elem_classes="results-area"):
             output_text = gr.Textbox(
@@ -365,32 +295,21 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
                 lines=5,
                 interactive=False
             )
-            status_text = gr.Markdown(
-                label="Status",
-                value=""
-            )
     
+    # Set up the click event
     analyze_btn.click(
         fn=analyze_with_loading,
         inputs=[input_text],
         outputs=[output_text],
         api_name="analyze"
     )
-    
-    search_button.click(
-        fn=fetch_and_analyze_script,
-        inputs=[search_query],
-        outputs=[output_text],
-        show_progress=True
-    )
 
+   # Footer section
     gr.HTML("""
         <div class="footer">
             <p>Made with <span class="heart">💖</span> by <a href="https://www.linkedin.com/in/kubermehta/" target="_blank">Kuber Mehta</a></p>
         </div>
     """)
-
-# Launch the Gradio interface
 
 if __name__ == "__main__":
     iface.launch(
