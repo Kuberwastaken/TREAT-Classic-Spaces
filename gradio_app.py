@@ -3,6 +3,10 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 import httpx
+import subprocess
+import signal
+import atexit
+
 
 custom_css = """
 * {
@@ -213,6 +217,19 @@ footer {
     100% { transform: scale(1); }
 }
 """
+# Start the API server
+def start_api_server():
+    # Start uvicorn in a subprocess
+    process = subprocess.Popen(["uvicorn", "script_search_api:app", "--reload"])
+    return process
+
+# Stop the API server
+def stop_api_server(process):
+    process.terminate()
+
+# Register the exit handler
+api_process = start_api_server()
+atexit.register(stop_api_server, api_process)
 
 async def fetch_and_analyze_script(movie_name, progress=gr.Progress(track_tqdm=True)):
     try:
@@ -372,6 +389,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
             <p>Made with <span class="heart">💖</span> by <a href="https://www.linkedin.com/in/kubermehta/" target="_blank">Kuber Mehta</a></p>
         </div>
     """)
+
+# Launch the Gradio interface
 
 if __name__ == "__main__":
     iface.launch(
