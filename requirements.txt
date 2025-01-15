@@ -1,8 +1,11 @@
-flask
-flask_cors
 torch
 gradio
-transformers
 accelerate
 safetensors
 huggingface-hub
+fastapi
+httpx
+beautifulsoup4
+bs4
+httpx 
+json 
