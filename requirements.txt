@@ -11,6 +11,5 @@ httpx
 flask
 flask_cors
 transformers
-subprocess
 signal 
 atexit
