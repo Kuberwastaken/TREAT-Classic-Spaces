@@ -3,7 +3,6 @@ from model.analyzer import analyze_content
 import asyncio
 import time
 import httpx
-import json
 
 custom_css = """
 * {
@@ -214,7 +213,6 @@ footer {
     100% { transform: scale(1); }
 }
 """
-
 
 async def fetch_and_analyze_script(movie_name, progress=gr.Progress(track_tqdm=True)):
     try:
