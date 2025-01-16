@@ -4,8 +4,21 @@ import asyncio
 import time
 import httpx
 import subprocess
-import signal
 import atexit
+
+# Start the API server
+def start_api_server():
+    # Start uvicorn in a subprocess
+    process = subprocess.Popen(["uvicorn", "script_search_api:app", "--reload"])
+    return process
+
+# Stop the API server
+def stop_api_server(process):
+    process.terminate()
+
+# Register the exit handler
+api_process = start_api_server()
+atexit.register(stop_api_server, api_process)
 
 
 custom_css = """
@@ -231,64 +244,45 @@ def stop_api_server(process):
 api_process = start_api_server()
 atexit.register(stop_api_server, api_process)
 
-async def fetch_and_analyze_script(movie_name, progress=gr.Progress(track_tqdm=True)):
+async def analyze_with_progress(movie_name, progress=gr.Progress()):
+    """Handle analysis with progress updates in Gradio"""
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # Start the analysis request
-            progress(0.2, desc="Initiating script search...")
+            # Start the analysis
             response = await client.get(
-                f"http://localhost:8000/api/fetch_and_analyze", 
+                "http://localhost:8000/api/start_analysis",
                 params={"movie_name": movie_name}
             )
+            response.raise_for_status()
+            task_id = response.json()["task_id"]
             
-            if response.status_code == 200:
-                # Start progress polling
-                while True:
-                    progress_response = await client.get(
-                        f"http://localhost:8000/api/progress",
-                        params={"movie_name": movie_name}
-                    )
-                    
-                    if progress_response.status_code == 200:
-                        progress_data = progress_response.json()
-                        current_progress = progress_data["progress"]
-                        current_status = progress_data.get("status", "Processing...")
-                        
-                        progress(current_progress, desc=current_status)
-                        
-                        if current_progress >= 1.0:
-                            break
-                            
-                    await asyncio.sleep(0.5)  # Poll every 500ms
+            # Poll for progress
+            while True:
+                progress_response = await client.get(
+                    f"http://localhost:8000/api/progress/{task_id}"
+                )
+                progress_response.raise_for_status()
+                status = progress_response.json()
                 
-                result = response.json()
-                triggers = result.get("detected_triggers", [])
+                # Update Gradio progress
+                progress(status["progress"], desc=status["status"])
                 
-                if not triggers or triggers == ["None"]:
-                    formatted_result = "✓ No triggers detected in the content."
-                else:
-                    trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
-                    formatted_result = f"⚠ Triggers Detected:\n{trigger_list}"
-                
-                return formatted_result
-            else:
-                return f"Error: Server returned status code {response.status_code}"
-            
-    except httpx.TimeoutError:
-        return "Error: Request timed out. Please try again."
-    except Exception as e:
-        return f"An unexpected error occurred: {str(e)}"
-
-async def track_progress(movie_name, progress):
-    async with httpx.AsyncClient() as client:
-        while True:
-            response = await client.get(f"http://localhost:8000/api/progress", params={"movie_name": movie_name})
-            if response.status_code == 200:
-                progress_data = response.json()
-                progress(progress_data["progress"], desc="Tracking progress...")
-                if progress_data["progress"] >= 1.0:
+                if status["is_complete"]:
+                    if status["error"]:
+                        return f"Error: {status['error']}"
+                    elif status["result"]:
+                        triggers = status["result"].get("detected_triggers", [])
+                        if not triggers or triggers == ["None"]:
+                            return "✓ No triggers detected in the content."
+                        else:
+                            trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
+                            return f"⚠ Triggers Detected:\n{trigger_list}"
                     break
-            await asyncio.sleep(1)
+                
+                await asyncio.sleep(0.5)
+    
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 def analyze_with_loading(text, progress=gr.Progress()):
     progress(0, desc="Starting analysis...")
@@ -323,6 +317,7 @@ def analyze_with_loading(text, progress=gr.Progress()):
         trigger_list = "\n".join([f"• {trigger}" for trigger in triggers])
         return f"⚠ Triggers Detected:\n{trigger_list}"
 
+# Update the Gradio interface
 with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     gr.HTML("""
         <div class="treat-title">
@@ -378,7 +373,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     )
     
     search_button.click(
-        fn=fetch_and_analyze_script,
+        fn=analyze_with_progress,
         inputs=[search_query],
         outputs=[output_text],
         show_progress=True

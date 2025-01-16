@@ -1,16 +1,16 @@
 # script_search_api.py
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+from datetime import datetime, timedelta
+from typing import Dict, Optional
+from pydantic import BaseModel
+from dataclasses import dataclass
+import logging
 import requests
 from bs4 import BeautifulSoup
-from model.analyzer import analyze_content
-import logging
 from difflib import get_close_matches
-import re
-from typing import Dict
-from dataclasses import dataclass
-from datetime import datetime
+from model.analyzer import analyze_content
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,32 +25,94 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_URL = "https://imsdb.com"
-ALL_SCRIPTS_URL = f"{BASE_URL}/all-scripts.html"
-
 @dataclass
-class ProgressInfo:
+class ProgressState:
     progress: float
     status: str
     timestamp: datetime
+    task_id: str
+    is_complete: bool = False
+    result: Optional[dict] = None
+    error: Optional[str] = None
 
-progress_tracker: Dict[str, ProgressInfo] = {}
+class ProgressResponse(BaseModel):
+    progress: float
+    status: str
+    is_complete: bool
+    result: Optional[dict] = None
+    error: Optional[str] = None
 
-def update_progress(movie_name: str, progress: float, message: str):
-    """
-    Update the progress tracker with current progress and status message.
-    """
-    progress_tracker[movie_name] = ProgressInfo(
+# Global progress tracker
+progress_tracker: Dict[str, ProgressState] = {}
+
+BASE_URL = "https://imsdb.com"
+ALL_SCRIPTS_URL = f"{BASE_URL}/all-scripts.html"
+
+def create_task_id(movie_name: str) -> str:
+    """Create a unique task ID for a movie analysis request"""
+    return f"{movie_name}-{datetime.now().timestamp()}"
+
+async def cleanup_old_tasks():
+    """Remove tasks older than 1 hour"""
+    while True:
+        current_time = datetime.now()
+        expired_tasks = [
+            task_id for task_id, state in progress_tracker.items()
+            if current_time - state.timestamp > timedelta(hours=1)
+        ]
+        for task_id in expired_tasks:
+            del progress_tracker[task_id]
+        await asyncio.sleep(300)  # Cleanup every 5 minutes
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the server and start cleanup task"""
+    progress_tracker.clear()
+    asyncio.create_task(cleanup_old_tasks())
+    logger.info("Server started, progress tracker initialized")
+
+def update_progress(task_id: str, progress: float, status: str, result: Optional[dict] = None, error: Optional[str] = None):
+    """Update progress state for a task"""
+    is_complete = progress >= 1.0
+    progress_tracker[task_id] = ProgressState(
         progress=progress,
-        status=message,
-        timestamp=datetime.now()
+        status=status,
+        timestamp=datetime.now(),
+        task_id=task_id,
+        is_complete=is_complete,
+        result=result,
+        error=error
     )
-    logger.info(f"{message} (Progress: {progress * 100:.0f}%)")
+    logger.info(f"Task {task_id}: {status} (Progress: {progress * 100:.0f}%)")
+
+@app.get("/api/start_analysis")
+async def start_analysis(movie_name: str):
+    """Start a new analysis task"""
+    task_id = create_task_id(movie_name)
+    update_progress(task_id, 0.0, "Starting analysis...")
+    
+    # Start the analysis task in the background
+    asyncio.create_task(run_analysis(task_id, movie_name))
+    
+    return {"task_id": task_id}
+
+@app.get("/api/progress/{task_id}")
+async def get_progress(task_id: str) -> ProgressResponse:
+    """Get current progress for a task"""
+    if task_id not in progress_tracker:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    state = progress_tracker[task_id]
+    return ProgressResponse(
+        progress=state.progress,
+        status=state.status,
+        is_complete=state.is_complete,
+        result=state.result,
+        error=state.error
+    )
 
 def find_movie_link(movie_name: str, soup: BeautifulSoup) -> str | None:
-    """
-    Find the closest matching movie link from the script database.
-    """
+    """Find the closest matching movie link from the script database."""
     movie_links = {link.text.strip().lower(): link['href'] for link in soup.find_all('a', href=True)}
     close_matches = get_close_matches(movie_name.lower(), movie_links.keys(), n=1, cutoff=0.6)
     
@@ -62,9 +124,7 @@ def find_movie_link(movie_name: str, soup: BeautifulSoup) -> str | None:
     return None
 
 def find_script_link(soup: BeautifulSoup, movie_name: str) -> str | None:
-    """
-    Find the script download link for a given movie.
-    """
+    """Find the script download link for a given movie."""
     patterns = [
         f'Read "{movie_name}" Script',
         f'Read "{movie_name.title()}" Script',
@@ -81,9 +141,7 @@ def find_script_link(soup: BeautifulSoup, movie_name: str) -> str | None:
     return None
 
 def fetch_script(movie_name: str) -> str | None:
-    """
-    Fetch and extract the script content for a given movie.
-    """
+    """Fetch and extract the script content for a given movie."""
     # Initial page load
     update_progress(movie_name, 0.1, "Fetching the script database...")
     try:
@@ -143,14 +201,33 @@ def fetch_script(movie_name: str) -> str | None:
         logger.error("Failed to extract script content.")
         return None
 
+async def run_analysis(task_id: str, movie_name: str):
+    """Run the actual analysis task"""
+    try:
+        # Fetch script
+        update_progress(task_id, 0.2, "Fetching script...")
+        script_text = fetch_script(movie_name)
+        if not script_text:
+            raise Exception("Script not found")
+
+        # Analyze content
+        update_progress(task_id, 0.6, "Analyzing content...")
+        result = await analyze_content(script_text)
+        
+        # Complete
+        update_progress(task_id, 1.0, "Analysis complete", result=result)
+        
+    except Exception as e:
+        logger.error(f"Error in analysis: {str(e)}", exc_info=True)
+        update_progress(task_id, 1.0, "Error occurred", error=str(e))
+
 @app.get("/api/fetch_and_analyze")
 async def fetch_and_analyze(movie_name: str):
-    """
-    Fetch and analyze a movie script, with progress tracking.
-    """
+    """Fetch and analyze a movie script, with progress tracking."""
     try:
         # Initialize progress
-        update_progress(movie_name, 0.0, "Starting script search...")
+        task_id = create_task_id(movie_name)
+        update_progress(task_id, 0.0, "Starting script search...")
         
         # Fetch script
         script_text = fetch_script(movie_name)
@@ -158,11 +235,11 @@ async def fetch_and_analyze(movie_name: str):
             raise HTTPException(status_code=404, detail="Script not found or error occurred")
 
         # Analyze content
-        update_progress(movie_name, 0.8, "Analyzing script content...")
+        update_progress(task_id, 0.8, "Analyzing script content...")
         result = await analyze_content(script_text)
         
         # Finalize
-        update_progress(movie_name, 1.0, "Analysis complete!")
+        update_progress(task_id, 1.0, "Analysis complete!")
         return result
         
     except Exception as e:
@@ -174,9 +251,7 @@ async def fetch_and_analyze(movie_name: str):
 
 @app.get("/api/progress")
 def get_progress(movie_name: str):
-    """
-    Get the current progress and status for a movie analysis.
-    """
+    """Get the current progress and status for a movie analysis."""
     if movie_name not in progress_tracker:
         return {
             "progress": 0,
@@ -198,14 +273,6 @@ def get_progress(movie_name: str):
         "progress": progress_info.progress,
         "status": progress_info.status
     }
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Initialize the server and clear any existing progress data.
-    """
-    progress_tracker.clear()
-    logger.info("Server started, progress tracker initialized")
 
 if __name__ == "__main__":
     import uvicorn
