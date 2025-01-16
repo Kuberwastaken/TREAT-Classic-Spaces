@@ -6,3 +6,5 @@ transformers
 accelerate
 safetensors
 huggingface-hub
+beautifulsoup4
+fastapi
