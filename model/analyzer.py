@@ -271,4 +271,3 @@ if __name__ == "__main__":
         title="Content Trigger Analysis",
         description="Analyze text content for sensitive topics and trigger warnings"
     )
-    iface.launch()
