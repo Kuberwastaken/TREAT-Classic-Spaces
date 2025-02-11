@@ -271,3 +271,8 @@ if __name__ == "__main__":
         title="Content Trigger Analysis",
         description="Analyze text content for sensitive topics and trigger warnings"
     )
+iface.launch(
+    server_name="0.0.0.0",
+    server_port=0,  # Let Gradio pick an available port
+    share=True
+)
