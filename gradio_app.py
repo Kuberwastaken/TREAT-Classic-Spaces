@@ -586,10 +586,3 @@ if __name__ == "__main__":
         title="Content Trigger Analysis",
         description="Analyze text content for sensitive topics and trigger warnings"
     )
-    
-    # Use Hugging Face Spaces environment variable for port
-    iface.launch(
-        server_name="0.0.0.0",
-        server_port=int(os.environ.get("PORT", 7860)),
-        share=True
-    )
