@@ -579,8 +579,17 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     """)
 
 if __name__ == "__main__":
+    iface = gr.Interface(
+        fn=analyze_content,
+        inputs=gr.Textbox(lines=8, label="Input Text"),
+        outputs=gr.JSON(),
+        title="Content Trigger Analysis",
+        description="Analyze text content for sensitive topics and trigger warnings"
+    )
+    
+    # Use Hugging Face Spaces environment variable for port
     iface.launch(
-        share=False,
-        debug=True,
-        show_error=True
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("PORT", 7860)),
+        share=True
     )
