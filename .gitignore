@@ -1,1 +1,4 @@
-treat-env
+treat-classic
+.gitignore 
+.gitattributes
+__pycache__

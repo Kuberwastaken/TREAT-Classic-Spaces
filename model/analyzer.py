@@ -1,5 +1,5 @@
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from datetime import datetime
 import gradio as gr
@@ -13,263 +13,231 @@ logger = logging.getLogger(__name__)
 
 class ContentAnalyzer:
     def __init__(self):
-        self.hf_token = os.getenv("HF_TOKEN")
-        if not self.hf_token:
-            raise ValueError("HF_TOKEN environment variable is not set!")
-        
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = None
         self.tokenizer = None
+        self.batch_size = 4
+        self.trigger_categories = {
+            "Violence": {
+                "mapped_name": "Violence",
+                "description": (
+                    "Any act involving physical force or aggression intended to cause harm, injury, or death to a person, animal, or object. "
+                    "Includes direct physical confrontations (e.g., fights, beatings, or assaults), implied violence (e.g., very graphical threats or descriptions of injuries), "
+                    "or large-scale events like wars, riots, or violent protests."
+                )
+            },
+            "Death": {
+                "mapped_name": "Death References",
+                "description": (
+                    "Any mention, implication, or depiction of the loss of life, including direct deaths of characters, including mentions of deceased individuals, "
+                    "or abstract references to mortality (e.g., 'facing the end' or 'gone forever'). This also covers depictions of funerals, mourning, "
+                    "grieving, or any dialogue that centers around death, do not take metaphors into context that don't actually lead to death."
+                )
+            },
+            "Substance_Use": {
+                "mapped_name": "Substance Use",
+                "description": (
+                    "Any explicit reference to the consumption, misuse, or abuse of drugs, alcohol, or other intoxicating substances. "
+                    "This includes scenes of drug use, drinking, smoking, discussions about heavy substance abuse or substance-related paraphernalia."
+                )
+            },
+            "Gore": {
+                "mapped_name": "Gore",
+                "description": (
+                    "Extremely detailed and graphic depictions of highly severe physical injuries, mutilation, or extreme bodily harm, often accompanied by descriptions of heavy blood, exposed organs, "
+                    "or dismemberment. This includes war scenes with severe casualties, horror scenarios involving grotesque creatures, or medical procedures depicted with excessive detail."
+                )
+            },
+            "Sexual_Content": {
+                "mapped_name": "Sexual Content",
+                "description": (
+                    "Any depiction of sexual activity, intimacy, or sexual behavior, ranging from implied scenes to explicit descriptions. "
+                    "This includes physical descriptions of characters in a sexual context, sexual dialogue, or references to sexual themes."
+                )
+            },
+            "Sexual_Abuse": {
+               "mapped_name": "Sexual Abuse",
+               "description": (
+                  "Any form of non-consensual sexual act, behavior, or interaction, involving coercion, manipulation, or physical force. "
+                  "This includes incidents of sexual assault, exploitation, harassment, and any acts where an individual is subjected to sexual acts against their will."
+               )
+            },
+            "Self_Harm": {
+                "mapped_name": "Self-Harm",
+                "description": (
+                    "Any mention or depiction of behaviors where an individual intentionally causes harm to themselves. This includes cutting, burning, or other forms of physical injury, "
+                    "as well as suicidal ideation, suicide attempts, or discussions of self-destructive thoughts and actions."
+                )
+            },
+            "Mental_Health": {
+                "mapped_name": "Mental Health Issues",
+                "description": (
+                    "Any reference to extreme mental health struggles, disorders, or psychological distress. This includes depictions of depression, anxiety, PTSD, bipolar disorder, "
+                    "or other conditions. Also includes toxic traits such as Gaslighting or other psycholgoical horrors"
+                )
+            }
+        }
         logger.info(f"Initialized analyzer with device: {self.device}")
 
     async def load_model(self, progress=None) -> None:
-        """Load the model and tokenizer with progress updates and detailed logging."""
+        """Load the model and tokenizer with progress updates."""
         try:
-            print("\n=== Starting Model Loading ===")
-            print(f"Time: {datetime.now()}")
-            
             if progress:
                 progress(0.1, "Loading tokenizer...")
             
-            print("Loading tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "meta-llama/Llama-3.2-3B",
+                "google/flan-t5-base",
                 use_fast=True
             )
-
+            
             if progress:
                 progress(0.3, "Loading model...")
             
-            print(f"Loading model on {self.device}...")
-            self.model = AutoModelForCausalLM.from_pretrained(
-                "meta-llama/Llama-3.2-3B",
-                token=self.hf_token,
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                "google/flan-t5-base",
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 device_map="auto"
             )
-
+            
+            if self.device == "cuda":
+                self.model.eval()
+                torch.cuda.empty_cache()
+                
             if progress:
                 progress(0.5, "Model loaded successfully")
-            
-            print("Model and tokenizer loaded successfully")
-            logger.info(f"Model loaded successfully on {self.device}")
+                
         except Exception as e:
             logger.error(f"Error loading model: {str(e)}")
-            print(f"\nERROR DURING MODEL LOADING: {str(e)}")
-            print("Stack trace:")
-            traceback.print_exc()
             raise
 
-    def _chunk_text(self, text: str, chunk_size: int = 256, overlap: int = 15) -> List[str]:
-        """Split text into overlapping chunks for processing."""
+    def _chunk_text(self, text: str, chunk_size: int = 512, overlap: int = 30) -> List[str]:
+        """Split text into overlapping chunks."""
+        words = text.split()
         chunks = []
-        for i in range(0, len(text), chunk_size - overlap):
-            chunk = text[i:i + chunk_size]
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk = ' '.join(words[i:i + chunk_size])
             chunks.append(chunk)
-        print(f"Split text into {len(chunks)} chunks with {overlap} token overlap")
         return chunks
 
-    async def analyze_chunk(
+    def _validate_response(self, response: str) -> str:
+        """Validate and clean model response."""
+        valid_responses = {"YES", "NO", "MAYBE"}
+        response = response.strip().upper()
+        first_word = response.split()[0] if response else "NO"
+        return first_word if first_word in valid_responses else "NO"
+
+    async def analyze_chunks_batch(
         self,
-        chunk: str,
-        trigger_categories: Dict,
+        chunks: List[str],
         progress: Optional[gr.Progress] = None,
         current_progress: float = 0,
         progress_step: float = 0
     ) -> Dict[str, float]:
-        """Analyze a single chunk of text for triggers with detailed logging."""
-        chunk_triggers = {}
-        print(f"\n--- Processing Chunk ---")
-        print(f"Chunk text (preview): {chunk[:50]}...")
+        """Analyze multiple chunks in batches."""
+        all_triggers = {}
         
-        for category, info in trigger_categories.items():
+        for category, info in self.trigger_categories.items():
             mapped_name = info["mapped_name"]
             description = info["description"]
+            
+            for i in range(0, len(chunks), self.batch_size):
+                batch_chunks = chunks[i:i + self.batch_size]
+                prompts = []
+                
+                for chunk in batch_chunks:
+                    prompt = f"""
+                    Task: Analyze if this text contains {mapped_name}.
+                    Context: {description}
+                    Text: "{chunk}"
+                    
+                    Rules for analysis:
+                    1. Only answer YES if there is clear, direct evidence
+                    2. Answer NO if the content is ambiguous or metaphorical
+                    3. Consider the severity and context
+                    
+                    Answer with ONLY ONE word: YES, NO, or MAYBE
+                    """
+                    prompts.append(prompt)
 
-            print(f"\nAnalyzing for {mapped_name}...")
-            prompt = f"""
-            Check this text for any clear indication of {mapped_name} ({description}).
-            only say yes if you are confident, make sure the text is not metaphorical.
-            Respond concisely and only with: YES, NO, or MAYBE.
-            Text: {chunk}
-            Answer:
-            """
-
-            try:
-                print("Sending prompt to model...")
-                inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-                with torch.no_grad():
-                    print("Generating response...")
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_new_tokens=2,
-                        do_sample=True,
-                        temperature=0.3,
-                        top_p=0.9,
-                        pad_token_id=self.tokenizer.eos_token_id
-                    )
-
-                response_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True).strip().upper()
-                first_word = response_text.split("\n")[-1].split()[0] if response_text else "NO"
-                print(f"Model response for {mapped_name}: {first_word}")
-
-                if first_word == "YES":
-                    print(f"Detected {mapped_name} in this chunk!")
-                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 1
-                elif first_word == "MAYBE":
-                    print(f"Possible {mapped_name} detected, marking for further review.")
-                    chunk_triggers[mapped_name] = chunk_triggers.get(mapped_name, 0) + 0.5
-                else:
-                    print(f"No {mapped_name} detected in this chunk.")
-
+                try:
+                    inputs = self.tokenizer(
+                        prompts,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        max_length=512
+                    ).to(self.device)
+                    
+                    with torch.no_grad():
+                        outputs = self.model.generate(
+                            **inputs,
+                            max_new_tokens=20,
+                            temperature=0.2,
+                            top_p=0.85,
+                            num_beams=3,
+                            early_stopping=True,
+                            pad_token_id=self.tokenizer.eos_token_id,
+                            do_sample=True
+                        )
+                    
+                    responses = [
+                        self.tokenizer.decode(output, skip_special_tokens=True)
+                        for output in outputs
+                    ]
+                    
+                    for response in responses:
+                        validated_response = self._validate_response(response)
+                        if validated_response == "YES":
+                            all_triggers[mapped_name] = all_triggers.get(mapped_name, 0) + 1
+                        elif validated_response == "MAYBE":
+                            all_triggers[mapped_name] = all_triggers.get(mapped_name, 0) + 0.5
+                
+                except Exception as e:
+                    logger.error(f"Error processing batch for {mapped_name}: {str(e)}")
+                    continue
+                
                 if progress:
                     current_progress += progress_step
                     progress(min(current_progress, 0.9), f"Analyzing {mapped_name}...")
-
-            except Exception as e:
-                logger.error(f"Error analyzing chunk for {mapped_name}: {str(e)}")
-                print(f"Error during analysis of {mapped_name}: {str(e)}")
-                traceback.print_exc()
-
-        return chunk_triggers
+                    
+        return all_triggers
 
     async def analyze_script(self, script: str, progress: Optional[gr.Progress] = None) -> List[str]:
-        """Analyze the entire script for triggers with progress updates and detailed logging."""
-        print("\n=== Starting Script Analysis ===")
-        print(f"Time: {datetime.now()}")
-
+        """Analyze the entire script."""
         if not self.model or not self.tokenizer:
             await self.load_model(progress)
-
-        # Initialize trigger categories (kept from your working script)
-        trigger_categories = {
-
-            "Violence": {
-                        "mapped_name": "Violence",
-                        "description": (
-                            "Any act of physical force meant to cause harm, injury, or death, including fights, threats, and large-scale violence like wars or riots."
-                        )
-                    },
-
-            "Death": {
-                        "mapped_name": "Death References",
-                        "description": (
-                            "Mentions or depictions of death, such as characters dying, references to deceased people, funerals, or mourning."
-                        )
-                    },
-
-            "Substance Use": {
-                        "mapped_name": "Substance Use",
-                        "description": (
-                            "Any reference to using or abusing drugs, alcohol, or other substances, including scenes of drinking, smoking, or drug use."
-                        )
-                    },
-
-            "Gore": {
-                        "mapped_name": "Gore",
-                        "description": (
-                            "Graphic depictions of severe injuries or mutilation, often with detailed blood, exposed organs, or dismemberment."
-                        )
-                    },
-
-            "Vomit": {
-                        "mapped_name": "Vomit",
-                        "description": (
-                            "Any explicit reference to vomiting or related actions. This includes only very specific mentions of nausea or the act of vomiting, with more focus on the direct description, only flag this if you absolutely believe it's present."
-                        )
-                    },
-
-            "Sexual Content": {
-                        "mapped_name": "Sexual Content",
-                        "description": (
-                            "Depictions or mentions of sexual activity, intimacy, or behavior, including sexual themes like harassment or innuendo."
-                        )
-                    },
-
-            "Sexual Abuse": {
-                        "mapped_name": "Sexual Abuse",
-                        "description": (
-                            "Explicit non-consensual sexual acts, including assault, molestation, or harassment, and the emotional or legal consequences of such abuse. A stronger focus on detailed depictions or direct references to coercion or violence."
-                        )
-                    },
-
-            "Self-Harm": {
-                        "mapped_name": "Self-Harm",
-                        "description": (
-                            "Depictions or mentions of intentional self-injury, including acts like cutting, burning, or other self-destructive behavior. Emphasis on more graphic or repeated actions, not implied or casual references."
-                        )
-                    },
-
-            "Gun Use": {
-                        "mapped_name": "Gun Use",
-                        "description": (
-                            "Explicit mentions of firearms in use, including threatening actions or accidents involving guns. Only triggers when the gun use is shown in a clear, violent context."
-                        )
-                    },
-
-            "Animal Cruelty": {
-                        "mapped_name": "Animal Cruelty",
-                        "description": (
-                            "Direct or explicit harm, abuse, or neglect of animals, including physical abuse or suffering, and actions performed for human entertainment or experimentation. Triggers only in clear, violent depictions."
-                        )
-                    },
-
-            "Mental Health Issues": {
-                        "mapped_name": "Mental Health Issues",
-                        "description": (
-                            "References to psychological struggles, such as depression, anxiety, or PTSD, including therapy or coping mechanisms."
-                        )
-                    }
-        }
-
+        
         chunks = self._chunk_text(script)
-        identified_triggers = {}
-        progress_step = 0.4 / (len(chunks) * len(trigger_categories))
-        current_progress = 0.5  # Starting after model loading
-
-        for chunk_idx, chunk in enumerate(chunks, 1):
-            chunk_triggers = await self.analyze_chunk(
-                chunk,
-                trigger_categories,
-                progress,
-                current_progress,
-                progress_step
-            )
-            
-            for trigger, count in chunk_triggers.items():
-                identified_triggers[trigger] = identified_triggers.get(trigger, 0) + count
-
+        identified_triggers = await self.analyze_chunks_batch(
+            chunks,
+            progress,
+            current_progress=0.5,
+            progress_step=0.4 / (len(chunks) * len(self.trigger_categories))
+        )
+        
         if progress:
             progress(0.95, "Finalizing results...")
 
-        print("\n=== Analysis Complete ===")
-        print("Final Results:")
         final_triggers = []
-
+        chunk_threshold = max(1, len(chunks) * 0.1)
+        
         for mapped_name, count in identified_triggers.items():
-            if count > 0.5:
+            if count >= chunk_threshold:
                 final_triggers.append(mapped_name)
-            print(f"- {mapped_name}: found in {count} chunks")
 
-        if not final_triggers:
-            print("No triggers detected")
-            final_triggers = ["None"]
-
-        return final_triggers
+        return final_triggers if final_triggers else ["None"]
 
 async def analyze_content(
     script: str,
     progress: Optional[gr.Progress] = None
 ) -> Dict[str, Union[List[str], str]]:
-    """Main analysis function for the Gradio interface with detailed logging."""
-    print("\n=== Starting Content Analysis ===")
-    print(f"Time: {datetime.now()}")
+    """Main analysis function for the Gradio interface."""
+    logger.info("Starting content analysis")
     
     analyzer = ContentAnalyzer()
     
     try:
+        # Fix: Use the analyzer instance's method instead of undefined function
         triggers = await analyzer.analyze_script(script, progress)
         
         if progress:
@@ -278,33 +246,29 @@ async def analyze_content(
         result = {
             "detected_triggers": triggers,
             "confidence": "High - Content detected" if triggers != ["None"] else "High - No concerning content detected",
-            "model": "Llama-3.2-3B",
+            "model": "google/flan-t5-base",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        print("\nFinal Result Dictionary:", result)
+        logger.info(f"Analysis complete: {result}")
         return result
 
     except Exception as e:
         logger.error(f"Analysis error: {str(e)}")
-        print(f"\nERROR OCCURRED: {str(e)}")
-        print("Stack trace:")
-        traceback.print_exc()
         return {
             "detected_triggers": ["Error occurred during analysis"],
             "confidence": "Error",
-            "model": "Llama-3.2-3B",
+            "model": "google/flan-t5-base",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "error": str(e)
         }
 
 if __name__ == "__main__":
-    # Gradio interface
     iface = gr.Interface(
         fn=analyze_content,
         inputs=gr.Textbox(lines=8, label="Input Text"),
         outputs=gr.JSON(),
-        title="Content Analysis",
-        description="Analyze text content for sensitive topics"
+        title="Content Trigger Analysis",
+        description="Analyze text content for sensitive topics and trigger warnings"
     )
     iface.launch()
