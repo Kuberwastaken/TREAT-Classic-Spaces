@@ -6,6 +6,16 @@ import httpx
 import subprocess
 import atexit
 
+# Start the API server
+def start_api_server():
+    # Start uvicorn in a subprocess
+    process = subprocess.Popen(["uvicorn", "script_search_api:app", "--reload"])
+    return process
+
+# Stop the API server
+def stop_api_server(process):
+    process.terminate()
+
 # Register the exit handler
 api_process = start_api_server()
 atexit.register(stop_api_server, api_process)
@@ -569,10 +579,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as iface:
     """)
 
 if __name__ == "__main__":
-    iface = gr.Interface(
-        fn=analyze_content,
-        inputs=gr.Textbox(lines=8, label="Input Text"),
-        outputs=gr.JSON(),
-        title="Content Trigger Analysis",
-        description="Analyze text content for sensitive topics and trigger warnings"
+    iface.launch(
+        share=False,
+        debug=True,
+        show_error=True
     )

@@ -237,6 +237,7 @@ async def analyze_content(
     analyzer = ContentAnalyzer()
     
     try:
+        # Fix: Use the analyzer instance's method instead of undefined function
         triggers = await analyzer.analyze_script(script, progress)
         
         if progress:
@@ -261,3 +262,13 @@ async def analyze_content(
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "error": str(e)
         }
+
+if __name__ == "__main__":
+    iface = gr.Interface(
+        fn=analyze_content,
+        inputs=gr.Textbox(lines=8, label="Input Text"),
+        outputs=gr.JSON(),
+        title="Content Trigger Analysis",
+        description="Analyze text content for sensitive topics and trigger warnings"
+    )
+    iface.launch()
