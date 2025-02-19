@@ -86,7 +86,7 @@ class ContentAnalyzer:
                 progress(0.1, "Loading tokenizer...")
             
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "google/flan-t5-large",
+                "google/flan-t5-base",
                 use_fast=True
             )
             
@@ -94,7 +94,7 @@ class ContentAnalyzer:
                 progress(0.3, "Loading model...")
             
             self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                "google/flan-t5-large",
+                "google/flan-t5-base",
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 device_map="auto"
             )
@@ -258,7 +258,7 @@ async def analyze_content(
         return {
             "detected_triggers": ["Error occurred during analysis"],
             "confidence": "Error",
-            "model": "google/flan-t5-large",
+            "model": "google/flan-t5-base",
             "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "error": str(e)
         }
